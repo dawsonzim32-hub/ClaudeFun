@@ -152,8 +152,18 @@ async def upload_product(page, product, pdf_folder):
         await page.screenshot(path="error_add_product.png")
         return False
 
+    # Wait for page to fully load
+    print("   Waiting for product type page to load...")
     await page.wait_for_load_state("networkidle")
-    await asyncio.sleep(2)
+    await asyncio.sleep(3)
+
+    # Wait for Digital Download option to appear
+    try:
+        await page.wait_for_selector('text="Digital Download"', timeout=15000)
+        print("   Product type page loaded!")
+    except:
+        print("   Waiting a bit longer...")
+        await asyncio.sleep(5)
 
     # Step 3: Click "Digital Download" button
     print("Step 3: Clicking Digital Download...")
