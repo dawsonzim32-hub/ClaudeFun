@@ -1,0 +1,7 @@
+filename,title,description,price,grades,subjects,reading_tags,themes,resource_type,cover_image,thumbnails,preview_file
+test-product.pdf,Test Reading Worksheet,"This is a test product for validating the upload workflow.
+
+Features:
+- Test feature 1
+- Test feature 2
+- Answer key included",2.99,3-5,ela;reading,reading;close-reading,elementary;no-prep,worksheet,,,
