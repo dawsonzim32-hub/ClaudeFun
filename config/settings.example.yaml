@@ -1,0 +1,35 @@
+# TPT Agent Settings
+# Copy this file to settings.yaml and fill in your details
+# NEVER commit settings.yaml - it contains sensitive information
+
+# TPT Account Credentials
+# For security, prefer using environment variables:
+#   TPT_EMAIL and TPT_PASSWORD
+# Or fill in below (less secure):
+tpt:
+  email: ""  # your-email@example.com
+  password: ""  # Leave empty to use environment variable
+
+# Browser Settings
+browser:
+  headless: false  # Set to true to run without visible browser
+  slow_motion: 100  # Milliseconds between actions (helps with reliability)
+  timeout: 30000  # Max wait time for elements (milliseconds)
+
+# File Paths
+paths:
+  products_folder: "./products"
+  products_csv: "./products/products.csv"
+  logs_folder: "./logs"
+
+# Upload Behavior
+upload:
+  default_mode: "draft"  # "draft" or "published" - ALWAYS use draft for safety
+  confirm_before_upload: true  # Show preview and require confirmation
+  stop_on_error: true  # Stop batch if any upload fails
+  delay_between_uploads: 5  # Seconds to wait between products
+
+# Logging
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  save_screenshots: true  # Save screenshots after each upload

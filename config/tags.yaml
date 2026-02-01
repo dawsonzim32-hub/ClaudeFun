@@ -1,0 +1,73 @@
+# TPT Tag Mappings
+# This file maps your shorthand tags to TPT's actual category values
+# Update these if TPT changes their category structure
+
+# Grade Levels
+grades:
+  prek: "PreK"
+  k: "Kindergarten"
+  1: "1st Grade"
+  2: "2nd Grade"
+  3: "3rd Grade"
+  4: "4th Grade"
+  5: "5th Grade"
+  6: "6th Grade"
+  7: "7th Grade"
+  8: "8th Grade"
+  9: "9th Grade"
+  10: "10th Grade"
+  11: "11th Grade"
+  12: "12th Grade"
+  higher-ed: "Higher Education"
+  adult: "Adult Education"
+  staff: "Staff"
+
+# Grade Range Shortcuts
+grade_ranges:
+  "k-2": ["Kindergarten", "1st Grade", "2nd Grade"]
+  "3-5": ["3rd Grade", "4th Grade", "5th Grade"]
+  "6-8": ["6th Grade", "7th Grade", "8th Grade"]
+  "9-12": ["9th Grade", "10th Grade", "11th Grade", "12th Grade"]
+
+# Reading Tags (your primary content types)
+reading_tags:
+  reading: "Reading"
+  close-reading: "Close Reading"
+  informational: "Informational Text"
+  informational-text: "Informational Text"
+
+# Resource Types
+resource_types:
+  worksheet: "Worksheets"
+  activity: "Activities"
+  assessment: "Assessment"
+  lesson: "Lesson"
+  unit: "Unit Plans"
+  printable: "Printables"
+  interactive: "Interactive Resources"
+  bundle: "Bundles"
+
+# Subject Areas
+subjects:
+  ela: "English Language Arts"
+  reading: "Reading"
+  writing: "Writing"
+  math: "Math"
+  science: "Science"
+  social-studies: "Social Studies"
+  history: "History"
+
+# Audience/Theme Tags (customize these for your store)
+# Add your specific 5-6 options here
+audience_themes:
+  # Example tags - replace with your actual themes
+  elementary: "Elementary"
+  middle-school: "Middle School"
+  high-school: "High School"
+  differentiated: "Differentiated"
+  no-prep: "No Prep"
+  digital: "Digital"
+  printable: "Printable"
+  # Add your specific themes below:
+  # your-theme-1: "Theme 1 Display Name"
+  # your-theme-2: "Theme 2 Display Name"

@@ -1,0 +1,23 @@
+# TPT Virtual Assistant Agent - Dependencies
+
+# Browser automation
+playwright>=1.40.0
+
+# Configuration handling
+pyyaml>=6.0
+
+# Spreadsheet support
+pandas>=2.0.0
+openpyxl>=3.1.0  # For Excel file support
+
+# CLI interface
+click>=8.1.0
+
+# Logging enhancements
+rich>=13.0.0  # Pretty console output
+
+# Environment variable management
+python-dotenv>=1.0.0
+
+# Validation
+pydantic>=2.0.0
