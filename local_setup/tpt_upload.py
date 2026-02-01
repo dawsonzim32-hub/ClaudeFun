@@ -111,43 +111,27 @@ async def login_to_tpt(page):
             print("Pressing Enter as fallback...")
             await page.keyboard.press('Enter')
 
-    # Wait for navigation - handle 2FA if needed
+    # Wait for navigation - always assume 2FA might happen
     print("Waiting for login to complete...")
-    await asyncio.sleep(3)
+    print("\n" + "="*60)
+    print("If TPT asks for an email verification code,")
+    print("check your email and enter the code in the browser window.")
+    print("Script will wait up to 10 MINUTES for you to complete login.")
+    print("="*60 + "\n")
 
-    # Check if we're on a verification/2FA page
-    current_url = page.url.lower()
-    page_content = await page.content()
+    # Wait up to 10 minutes for login to complete (handles 2FA)
+    for i in range(600):
+        await asyncio.sleep(1)
+        current_url = page.url.lower()
 
-    if "verify" in current_url or "code" in current_url or "verification" in page_content.lower() or "enter the code" in page_content.lower():
-        print("\n" + "="*60)
-        print("TWO-FACTOR AUTHENTICATION DETECTED!")
-        print("="*60)
-        print("TPT sent a verification code to your email.")
-        print("Please check your email and enter the code in the browser.")
-        print("\nWaiting for you to complete verification...")
-        print("(Script will continue automatically once you're logged in)")
-        print("="*60 + "\n")
+        # Check if we're past login/verification
+        if "login" not in current_url and "signin" not in current_url and "verify" not in current_url and "code" not in current_url:
+            print(f"\nLogin complete! Redirected to: {page.url}")
+            break
 
-        # Wait up to 5 minutes for user to enter code
-        for i in range(300):
-            await asyncio.sleep(1)
-            current_url = page.url.lower()
-            if "login" not in current_url and "signin" not in current_url and "verify" not in current_url:
-                print(f"\nVerification complete! Redirected to: {page.url}")
-                break
-            if i % 30 == 29:
-                print(f"  Still waiting for verification... ({(i+1)//60} min {(i+1)%60} sec)")
-    else:
-        # No 2FA, just wait for redirect
-        for i in range(30):
-            await asyncio.sleep(1)
-            current_url = page.url.lower()
-            if "login" not in current_url and "signin" not in current_url:
-                print(f"Login succeeded! Redirected to: {page.url}")
-                break
-            if i % 5 == 4:
-                print(f"  Still waiting... ({i+1} seconds)")
+        # Progress updates
+        if i % 30 == 29:
+            print(f"  Still waiting... ({(i+1)//60} min {(i+1)%60} sec) - enter code if prompted")
 
     await page.screenshot(path="after_login.png")
     print("Screenshot saved as after_login.png")
