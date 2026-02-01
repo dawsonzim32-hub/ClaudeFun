@@ -352,10 +352,16 @@ async def upload_product(page, product, pdf_folder):
     await page.evaluate('window.scrollTo(0, 700)')
     await asyncio.sleep(1)
 
-    for tag in subject_tags:
+    # First click uses placeholder, subsequent clicks use the box area
+    for i, tag in enumerate(subject_tags):
         try:
-            # Click the Subject Area dropdown box
-            await page.click('text="Select up to three subject areas"')
+            if i == 0:
+                # First time - click placeholder text
+                await page.click('text="Select up to three subject areas"')
+            else:
+                # After first selection, click in the Subject Area section
+                subject_box = page.locator('text="Subject Area"').locator('..').locator('..').locator('[class*="select"], [class*="input"], [class*="container"]').first
+                await subject_box.click()
             await asyncio.sleep(0.5)
 
             # Click the tag option from the dropdown
@@ -369,10 +375,15 @@ async def upload_product(page, product, pdf_folder):
     print("Step 8c: Adding Theme/Audience tags...")
     theme_tags = ["Homeschool", "Activities", "Bell Ringers", "Independent Work Packet", "Worksheets"]
 
-    for tag in theme_tags:
+    for i, tag in enumerate(theme_tags):
         try:
-            # Click the Tag dropdown box
-            await page.click('text="Select up to six tags"')
+            if i == 0:
+                # First time - click placeholder text
+                await page.click('text="Select up to six tags"')
+            else:
+                # After first selection, click in the Tag section
+                tag_box = page.locator('text="Theme, Audience"').locator('..').locator('..').locator('[class*="select"], [class*="input"], [class*="container"]').first
+                await tag_box.click()
             await asyncio.sleep(0.5)
 
             # Click the tag option from the dropdown
