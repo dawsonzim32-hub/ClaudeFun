@@ -1,11 +1,11 @@
-filename,title,description,price,grades,reading_tags,themes,resource_type
+filename,title,description,price,grades,subjects,reading_tags,themes,resource_type,cover_image,thumbnails,preview_file
 example-worksheet.pdf,Reading Comprehension Worksheet Pack,"A comprehensive set of reading comprehension worksheets designed to help students practice close reading skills. Includes multiple passages with varying difficulty levels.
 
 Features:
 - 10 reading passages
 - Multiple choice questions
 - Short answer sections
-- Answer key included",4.99,3-5,reading;close-reading,elementary;no-prep,worksheet
+- Answer key included",4.99,3-5,ela;reading,reading;close-reading,elementary;no-prep,worksheet,covers/worksheet-cover.png,thumbs/ws-1.png;thumbs/ws-2.png;thumbs/ws-3.png;thumbs/ws-4.png,previews/worksheet-preview.pdf
 example-bundle.zip,Informational Text Bundle Grade 6-8,"Complete informational text unit for middle school students. Includes articles, graphic organizers, and assessments.
 
 This bundle contains:
@@ -13,4 +13,4 @@ This bundle contains:
 - Comprehension questions for each
 - Graphic organizers
 - Final assessment
-- Teacher guide",12.99,6-8,informational-text;close-reading,middle-school;differentiated,bundle
+- Teacher guide",12.99,6-8,ela;reading;writing,informational-text;close-reading,middle-school;differentiated,bundle,covers/bundle-cover.png,thumbs/bundle-1.png;thumbs/bundle-2.png;thumbs/bundle-3.png;thumbs/bundle-4.png,previews/bundle-preview.pdf
