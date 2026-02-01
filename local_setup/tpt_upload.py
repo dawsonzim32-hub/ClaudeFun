@@ -309,6 +309,31 @@ async def upload_product(page, product, pdf_folder):
     except Exception as e:
         print(f"WARNING: Could not set price: {e}")
 
+    # Step 7b: Select Tax Code
+    print("Step 7b: Selecting Tax Code...")
+    try:
+        # Click the tax code dropdown
+        tax_dropdown = page.locator('text="Select a tax code"')
+        if await tax_dropdown.is_visible(timeout=3000):
+            await tax_dropdown.click()
+            await asyncio.sleep(1)
+
+            # Select "Digital books" option
+            tax_option = page.locator('text="Digital books sold to an end user with rights for permanent use"')
+            if await tax_option.is_visible(timeout=2000):
+                await tax_option.click()
+                print("   Selected: Digital books")
+            else:
+                # Try Other Digital Goods as fallback
+                other_option = page.locator('text="Other Digital Goods"')
+                if await other_option.is_visible(timeout=1000):
+                    await other_option.click()
+                    print("   Selected: Other Digital Goods")
+        else:
+            print("   Tax code dropdown not found")
+    except Exception as e:
+        print(f"WARNING: Could not set tax code: {e}")
+
     # Step 8: Select grades 4-8
     print("Step 8: Selecting grades 4-8...")
     for grade in ["4th Grade", "5th Grade", "6th Grade", "7th Grade", "8th Grade"]:
