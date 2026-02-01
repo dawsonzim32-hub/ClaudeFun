@@ -37,113 +37,69 @@ SAVE_AS_DRAFT = True  # True = save as draft, False = publish immediately
 HEADLESS = False  # False = show browser window, True = run invisibly
 DELAY_BETWEEN_UPLOADS = 3  # seconds between each upload
 
+# Use persistent browser profile to save login session
+USER_DATA_DIR = os.path.join(os.path.dirname(__file__), "browser_data")
+
 
 # =============================================================================
 # UPLOAD LOGIC
 # =============================================================================
 
+async def check_if_logged_in(page):
+    """Check if already logged in to TPT."""
+    print("Checking if already logged in...")
+    await page.goto("https://www.teacherspayteachers.com/My-Products")
+    await asyncio.sleep(3)
+
+    current_url = page.url.lower()
+    if "login" in current_url or "signin" in current_url:
+        return False
+    return True
+
+
 async def login_to_tpt(page):
-    """Log into TPT using Playwright's getByPlaceholder."""
-    print("Navigating to TPT login...")
-    await page.goto("https://www.teacherspayteachers.com/Login")
+    """Ensure user is logged in - let them do it manually."""
 
-    # Wait for page to fully load
-    print("Waiting for page to load...")
-    await page.wait_for_load_state("networkidle")
-    await asyncio.sleep(2)
+    # First check if already logged in (from previous session)
+    if await check_if_logged_in(page):
+        print("Already logged in from previous session!")
+        return True
 
-    # Take screenshot
-    await page.screenshot(path="login_page.png")
-    print("Screenshot saved as login_page.png")
-
-    # Use Playwright's getByPlaceholder - the recommended modern approach
-    print("Looking for email field by placeholder...")
-    try:
-        email_field = page.get_by_placeholder("Email or username")
-        await email_field.wait_for(state="visible", timeout=10000)
-        print("Found email field! Clicking and typing...")
-        await email_field.click()
-        await asyncio.sleep(0.3)
-        await email_field.fill(TPT_EMAIL)
-        print(f"Email entered: {TPT_EMAIL}")
-    except Exception as e:
-        print(f"Could not find email field: {e}")
-        # Fallback: try to find any visible input
-        print("Trying fallback: clicking first input...")
-        inputs = await page.query_selector_all('input')
-        print(f"Found {len(inputs)} input elements")
-        for i, inp in enumerate(inputs):
-            try:
-                placeholder = await inp.get_attribute('placeholder')
-                inp_type = await inp.get_attribute('type')
-                print(f"  Input {i}: type={inp_type}, placeholder={placeholder}")
-            except:
-                pass
-        return False
-
-    print("Looking for password field...")
-    try:
-        password_field = page.get_by_placeholder("Password")
-        await password_field.click()
-        await asyncio.sleep(0.3)
-        await password_field.fill(TPT_PASSWORD)
-        print("Password entered")
-    except Exception as e:
-        print(f"Could not find password field: {e}")
-        return False
-
-    # Take screenshot before submitting
-    await page.screenshot(path="before_submit.png")
-    print("Screenshot saved as before_submit.png")
-
-    # Click login button
-    print("Looking for Log in button...")
-    try:
-        login_button = page.get_by_role("button", name="Log in")
-        await login_button.click()
-        print("Clicked Log in button")
-    except Exception as e:
-        print(f"Could not find button by role, trying text: {e}")
-        try:
-            await page.click('button:has-text("Log in")')
-            print("Clicked button by text")
-        except:
-            print("Pressing Enter as fallback...")
-            await page.keyboard.press('Enter')
-
-    # Wait for navigation - always assume 2FA might happen
-    print("Waiting for login to complete...")
+    # Not logged in - prompt user to log in manually
     print("\n" + "="*60)
-    print("If TPT asks for an email verification code,")
-    print("check your email and enter the code in the browser window.")
-    print("Script will wait up to 10 MINUTES for you to complete login.")
+    print("MANUAL LOGIN REQUIRED")
+    print("="*60)
+    print("The browser window is open. Please:")
+    print("  1. Log in to TPT manually")
+    print("  2. Complete any 2FA verification")
+    print("  3. Once you see your dashboard, come back here")
+    print("\nWaiting for you to log in (up to 10 minutes)...")
     print("="*60 + "\n")
 
-    # Wait up to 10 minutes for login to complete (handles 2FA)
+    # Go to login page
+    await page.goto("https://www.teacherspayteachers.com/Login")
+    await asyncio.sleep(2)
+
+    # Wait for user to complete login
     for i in range(600):
         await asyncio.sleep(1)
         current_url = page.url.lower()
 
-        # Check if we're past login/verification
-        if "login" not in current_url and "signin" not in current_url and "verify" not in current_url and "code" not in current_url:
-            print(f"\nLogin complete! Redirected to: {page.url}")
+        # Check if we're past login
+        if "login" not in current_url and "signin" not in current_url and "verify" not in current_url:
+            print(f"\nLogin detected! You're now at: {page.url}")
             break
 
-        # Progress updates
         if i % 30 == 29:
-            print(f"  Still waiting... ({(i+1)//60} min {(i+1)%60} sec) - enter code if prompted")
+            print(f"  Still waiting for login... ({(i+1)//60} min {(i+1)%60} sec)")
 
-    await page.screenshot(path="after_login.png")
-    print("Screenshot saved as after_login.png")
-
-    # Check if login succeeded
+    # Verify login worked
     current_url = page.url.lower()
-    if "login" in current_url or "signin" in current_url or "verify" in current_url:
-        print(f"WARNING: Still on login/verification page. URL: {page.url}")
-        print("Login may have failed or timed out.")
+    if "login" in current_url or "signin" in current_url:
+        print("Login timed out.")
         return False
 
-    print("Login successful!")
+    print("Login successful! Your session is saved for next time.")
     return True
 
 
@@ -291,17 +247,22 @@ async def main():
         print("  python tpt_upload.py --product 41")
         return
 
-    # Start browser and upload
-    print("\nStarting browser...")
+    # Start browser with persistent profile (saves login session)
+    print("\nStarting browser (using saved profile for login)...")
+    print(f"Profile location: {USER_DATA_DIR}")
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=HEADLESS)
-        context = await browser.new_context()
-        page = await context.new_page()
+        # Use persistent context - this saves cookies/login between runs
+        context = await p.chromium.launch_persistent_context(
+            USER_DATA_DIR,
+            headless=HEADLESS,
+            args=['--disable-blink-features=AutomationControlled']
+        )
+        page = context.pages[0] if context.pages else await context.new_page()
 
         # Login
         if not await login_to_tpt(page):
             print("Login failed. Exiting.")
-            await browser.close()
+            await context.close()
             return
 
         print("\n*** LOGIN SUCCESSFUL - Starting upload process ***\n")
@@ -334,7 +295,7 @@ async def main():
         print(f"COMPLETE: {successful} successful, {failed} failed")
         print(f"{'='*60}")
 
-        await browser.close()
+        await context.close()
 
 
 if __name__ == "__main__":
