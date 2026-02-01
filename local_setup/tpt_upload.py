@@ -344,92 +344,49 @@ async def upload_product(page, product, pdf_folder):
         except:
             pass
 
-    # Step 8b: Add Subject Area tags
+    # Step 8b: Add Subject Area tags (treat as dropdown)
     print("Step 8b: Adding Subject Area tags...")
     subject_tags = ["Close Reading", "Reading", "Informational Text"]
 
     # Scroll down to Categories section
     await page.evaluate('window.scrollTo(0, 600)')
     await asyncio.sleep(1)
-    await page.screenshot(path="step8b_before_subjects.png")
 
-    # Find all inputs on page and print count for debugging
-    all_inputs = page.locator('input:visible')
-    input_count = await all_inputs.count()
-    print(f"   Found {input_count} visible inputs on page")
-
-    # The Subject Area input should be after the grade checkboxes
-    # Try clicking directly on input fields that look like tag inputs
-    try:
-        # Look for input with placeholder about searching/selecting
-        subject_input = page.locator('input[placeholder*="Search"], input[placeholder*="search"], input[placeholder*="Select"], input[placeholder*="select"], input[placeholder*="Add"]').first
-        if await subject_input.is_visible(timeout=2000):
-            await subject_input.click()
-            print("   Found subject input by placeholder")
+    for tag in subject_tags:
+        try:
+            # Click the Subject Area dropdown to open it
+            subject_dropdown = page.locator('text="Subject Area"').locator('..').locator('..').locator('[class*="select"], [class*="dropdown"], [role="combobox"], input').first
+            await subject_dropdown.click()
             await asyncio.sleep(0.5)
-            for tag in subject_tags:
-                await page.keyboard.type(tag)
-                await asyncio.sleep(0.8)
-                await page.keyboard.press("Enter")
-                await asyncio.sleep(0.5)
-                print(f"   Added subject: {tag}")
-        else:
-            # Fallback: click by coordinates
-            subject_label = page.locator('text="Subject Area"').first
-            box = await subject_label.bounding_box()
-            if box:
-                await page.mouse.click(box['x'] + 200, box['y'] + 50)
-                print(f"   Clicked below Subject Area label")
-                await asyncio.sleep(0.5)
-                for tag in subject_tags:
-                    await page.keyboard.type(tag)
-                    await asyncio.sleep(0.8)
-                    await page.keyboard.press("Enter")
-                    await asyncio.sleep(0.5)
-                    print(f"   Added subject: {tag}")
-    except Exception as e:
-        print(f"   Subject tags error: {e}")
 
-    # Step 8c: Add Theme/Audience tags
+            # Click the option from the dropdown
+            option = page.get_by_text(tag, exact=True).first
+            if await option.is_visible(timeout=2000):
+                await option.click()
+                print(f"   Selected subject: {tag}")
+                await asyncio.sleep(0.3)
+        except Exception as e:
+            print(f"   Could not select {tag}: {e}")
+
+    # Step 8c: Add Theme/Audience tags (treat as dropdown)
     print("Step 8c: Adding Theme/Audience tags...")
     theme_tags = ["Homeschool", "Activities", "Bell Ringers", "Independent Work Packet", "Worksheets"]
 
-    try:
-        # Scroll a bit more to make Tag section visible
-        await page.evaluate('window.scrollBy(0, 200)')
-        await asyncio.sleep(0.5)
-
-        # Look for second search/select input (first was Subject Area)
-        tag_inputs = page.locator('input[placeholder*="Search"], input[placeholder*="search"], input[placeholder*="Select"], input[placeholder*="select"], input[placeholder*="Add"]')
-        tag_count = await tag_inputs.count()
-        print(f"   Found {tag_count} tag-like inputs")
-
-        if tag_count >= 2:
-            await tag_inputs.nth(1).click()
-            print("   Clicked second tag input")
+    for tag in theme_tags:
+        try:
+            # Click the Tag dropdown to open it
+            tag_dropdown = page.locator('text="Theme, Audience"').locator('..').locator('..').locator('[class*="select"], [class*="dropdown"], [role="combobox"], input').first
+            await tag_dropdown.click()
             await asyncio.sleep(0.5)
-            for tag in theme_tags:
-                await page.keyboard.type(tag)
-                await asyncio.sleep(0.8)
-                await page.keyboard.press("Enter")
-                await asyncio.sleep(0.5)
-                print(f"   Added tag: {tag}")
-        else:
-            # Fallback: click by coordinates below Theme label
-            tag_label = page.locator('text="Theme, Audience"').first
-            box = await tag_label.bounding_box()
-            if box:
-                await page.mouse.click(box['x'] + 200, box['y'] + 50)
-                print(f"   Clicked below Theme label")
-                await asyncio.sleep(0.5)
-                for tag in theme_tags:
-                    await page.keyboard.type(tag)
-                    await asyncio.sleep(0.8)
-                    await page.keyboard.press("Enter")
-                    await asyncio.sleep(0.5)
-                    print(f"   Added tag: {tag}")
-    except Exception as e:
-        print(f"   Theme tags error: {e}")
+
+            # Click the option from the dropdown
+            option = page.get_by_text(tag, exact=True).first
+            if await option.is_visible(timeout=2000):
+                await option.click()
+                print(f"   Selected tag: {tag}")
+                await asyncio.sleep(0.3)
+        except Exception as e:
+            print(f"   Could not select {tag}: {e}")
 
     # Step 9: Uncheck "Make Listing Active" for draft
     if SAVE_AS_DRAFT:
