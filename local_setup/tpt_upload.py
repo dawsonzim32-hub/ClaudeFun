@@ -348,31 +348,25 @@ async def upload_product(page, product, pdf_folder):
     print("Step 8b: Adding Subject Area tags...")
     subject_tags = ["Close Reading", "Reading", "Informational Text"]
 
-    # First scroll down to the Categories section to make it visible
-    # and get away from the top search bar
-    try:
-        categories_label = page.locator('text="Categories"').first
-        await categories_label.scroll_into_view_if_needed()
-        await asyncio.sleep(1)
-    except:
-        # Fallback scroll
-        await page.evaluate('window.scrollTo(0, 800)')
-        await asyncio.sleep(1)
-
+    # Scroll down to Categories section
+    await page.evaluate('window.scrollTo(0, 600)')
+    await asyncio.sleep(1)
     await page.screenshot(path="step8b_before_subjects.png")
 
-    # Click directly below "Subject Area Required" label using coordinates
-    try:
-        subject_label = page.locator('text="Subject Area"').first
-        box = await subject_label.bounding_box()
-        if box:
-            # Click in the input area below the label (offset down and right into the input box)
-            click_x = box['x'] + 150
-            click_y = box['y'] + 60
-            await page.mouse.click(click_x, click_y)
-            print(f"   Clicked at coordinates ({click_x}, {click_y})")
-            await asyncio.sleep(0.5)
+    # Find all inputs on page and print count for debugging
+    all_inputs = page.locator('input:visible')
+    input_count = await all_inputs.count()
+    print(f"   Found {input_count} visible inputs on page")
 
+    # The Subject Area input should be after the grade checkboxes
+    # Try clicking directly on input fields that look like tag inputs
+    try:
+        # Look for input with placeholder about searching/selecting
+        subject_input = page.locator('input[placeholder*="Search"], input[placeholder*="search"], input[placeholder*="Select"], input[placeholder*="select"], input[placeholder*="Add"]').first
+        if await subject_input.is_visible(timeout=2000):
+            await subject_input.click()
+            print("   Found subject input by placeholder")
+            await asyncio.sleep(0.5)
             for tag in subject_tags:
                 await page.keyboard.type(tag)
                 await asyncio.sleep(0.8)
@@ -380,7 +374,19 @@ async def upload_product(page, product, pdf_folder):
                 await asyncio.sleep(0.5)
                 print(f"   Added subject: {tag}")
         else:
-            print("   WARNING: Could not find Subject Area label")
+            # Fallback: click by coordinates
+            subject_label = page.locator('text="Subject Area"').first
+            box = await subject_label.bounding_box()
+            if box:
+                await page.mouse.click(box['x'] + 200, box['y'] + 50)
+                print(f"   Clicked below Subject Area label")
+                await asyncio.sleep(0.5)
+                for tag in subject_tags:
+                    await page.keyboard.type(tag)
+                    await asyncio.sleep(0.8)
+                    await page.keyboard.press("Enter")
+                    await asyncio.sleep(0.5)
+                    print(f"   Added subject: {tag}")
     except Exception as e:
         print(f"   Subject tags error: {e}")
 
@@ -388,18 +394,20 @@ async def upload_product(page, product, pdf_folder):
     print("Step 8c: Adding Theme/Audience tags...")
     theme_tags = ["Homeschool", "Activities", "Bell Ringers", "Independent Work Packet", "Worksheets"]
 
-    # Click directly below "Tag (Theme, Audience, Language)" label
     try:
-        # Find the Tag label by looking for "Theme" text
-        tag_label = page.locator('text="Theme, Audience"').first
-        box = await tag_label.bounding_box()
-        if box:
-            click_x = box['x'] + 150
-            click_y = box['y'] + 60
-            await page.mouse.click(click_x, click_y)
-            print(f"   Clicked at coordinates ({click_x}, {click_y})")
-            await asyncio.sleep(0.5)
+        # Scroll a bit more to make Tag section visible
+        await page.evaluate('window.scrollBy(0, 200)')
+        await asyncio.sleep(0.5)
 
+        # Look for second search/select input (first was Subject Area)
+        tag_inputs = page.locator('input[placeholder*="Search"], input[placeholder*="search"], input[placeholder*="Select"], input[placeholder*="select"], input[placeholder*="Add"]')
+        tag_count = await tag_inputs.count()
+        print(f"   Found {tag_count} tag-like inputs")
+
+        if tag_count >= 2:
+            await tag_inputs.nth(1).click()
+            print("   Clicked second tag input")
+            await asyncio.sleep(0.5)
             for tag in theme_tags:
                 await page.keyboard.type(tag)
                 await asyncio.sleep(0.8)
@@ -407,7 +415,19 @@ async def upload_product(page, product, pdf_folder):
                 await asyncio.sleep(0.5)
                 print(f"   Added tag: {tag}")
         else:
-            print("   WARNING: Could not find Tag label")
+            # Fallback: click by coordinates below Theme label
+            tag_label = page.locator('text="Theme, Audience"').first
+            box = await tag_label.bounding_box()
+            if box:
+                await page.mouse.click(box['x'] + 200, box['y'] + 50)
+                print(f"   Clicked below Theme label")
+                await asyncio.sleep(0.5)
+                for tag in theme_tags:
+                    await page.keyboard.type(tag)
+                    await asyncio.sleep(0.8)
+                    await page.keyboard.press("Enter")
+                    await asyncio.sleep(0.5)
+                    print(f"   Added tag: {tag}")
     except Exception as e:
         print(f"   Theme tags error: {e}")
 
