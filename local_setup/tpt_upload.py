@@ -352,46 +352,49 @@ async def upload_product(page, product, pdf_folder):
     await page.evaluate('window.scrollTo(0, 700)')
     await asyncio.sleep(1)
 
-    # First click uses placeholder, subsequent clicks use the box area
-    for i, tag in enumerate(subject_tags):
-        try:
-            if i == 0:
-                # First time - click placeholder text
-                await page.click('text="Select up to three subject areas"')
-            else:
-                # After first selection, click in the Subject Area section
-                subject_box = page.locator('text="Subject Area"').locator('..').locator('..').locator('[class*="select"], [class*="input"], [class*="container"]').first
-                await subject_box.click()
-            await asyncio.sleep(0.5)
+    try:
+        # Click to open the dropdown
+        await page.click('text="Select up to three subject areas"')
+        await asyncio.sleep(0.5)
 
-            # Click the tag option from the dropdown
-            await page.click(f'text="{tag}"')
-            print(f"   Selected: {tag}")
+        # Click first tag from dropdown
+        await page.click(f'text="{subject_tags[0]}"')
+        print(f"   Selected: {subject_tags[0]}")
+        await asyncio.sleep(0.5)
+
+        # Type remaining tags
+        for tag in subject_tags[1:]:
+            await page.keyboard.type(tag)
             await asyncio.sleep(0.3)
-        except Exception as e:
-            print(f"   Could not select {tag}: {e}")
+            await page.keyboard.press("Enter")
+            await asyncio.sleep(0.5)
+            print(f"   Typed: {tag}")
+    except Exception as e:
+        print(f"   Subject tags error: {e}")
 
     # Step 8c: Add Theme/Audience tags
     print("Step 8c: Adding Theme/Audience tags...")
     theme_tags = ["Homeschool", "Activities", "Bell Ringers", "Independent Work Packet", "Worksheets"]
 
-    for i, tag in enumerate(theme_tags):
-        try:
-            if i == 0:
-                # First time - click placeholder text
-                await page.click('text="Select up to six tags"')
-            else:
-                # After first selection, click in the Tag section
-                tag_box = page.locator('text="Theme, Audience"').locator('..').locator('..').locator('[class*="select"], [class*="input"], [class*="container"]').first
-                await tag_box.click()
-            await asyncio.sleep(0.5)
+    try:
+        # Click to open the dropdown
+        await page.click('text="Select up to six tags"')
+        await asyncio.sleep(0.5)
 
-            # Click the tag option from the dropdown
-            await page.click(f'text="{tag}"')
-            print(f"   Selected: {tag}")
+        # Click first tag from dropdown
+        await page.click(f'text="{theme_tags[0]}"')
+        print(f"   Selected: {theme_tags[0]}")
+        await asyncio.sleep(0.5)
+
+        # Type remaining tags
+        for tag in theme_tags[1:]:
+            await page.keyboard.type(tag)
             await asyncio.sleep(0.3)
-        except Exception as e:
-            print(f"   Could not select {tag}: {e}")
+            await page.keyboard.press("Enter")
+            await asyncio.sleep(0.5)
+            print(f"   Typed: {tag}")
+    except Exception as e:
+        print(f"   Theme tags error: {e}")
 
     # Step 9: Uncheck "Make Listing Active" for draft
     if SAVE_AS_DRAFT:
