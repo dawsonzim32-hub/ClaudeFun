@@ -312,23 +312,50 @@ async def upload_product(page, product, pdf_folder):
     # Step 7b: Select Tax Code
     print("Step 7b: Selecting Tax Code...")
     try:
-        # Click the tax code dropdown
-        tax_dropdown = page.locator('text="Select a tax code"')
-        if await tax_dropdown.is_visible(timeout=3000):
-            await tax_dropdown.click()
+        # Try multiple ways to find and click the dropdown
+        tax_clicked = False
+
+        # Method 1: Click text "Select a tax code"
+        try:
+            tax_dropdown = page.get_by_text("Select a tax code")
+            if await tax_dropdown.is_visible(timeout=2000):
+                await tax_dropdown.click()
+                tax_clicked = True
+                print("   Opened tax dropdown (method 1)")
+        except:
+            pass
+
+        # Method 2: Find dropdown near "Tax Code" label
+        if not tax_clicked:
+            try:
+                tax_section = page.locator('text="Tax Code"').locator('..').locator('select, [role="combobox"], [class*="dropdown"], [class*="select"]').first
+                if await tax_section.is_visible(timeout=2000):
+                    await tax_section.click()
+                    tax_clicked = True
+                    print("   Opened tax dropdown (method 2)")
+            except:
+                pass
+
+        if tax_clicked:
             await asyncio.sleep(1)
 
             # Select "Digital books" option
-            tax_option = page.locator('text="Digital books sold to an end user with rights for permanent use"')
-            if await tax_option.is_visible(timeout=2000):
-                await tax_option.click()
-                print("   Selected: Digital books")
-            else:
-                # Try Other Digital Goods as fallback
-                other_option = page.locator('text="Other Digital Goods"')
-                if await other_option.is_visible(timeout=1000):
-                    await other_option.click()
-                    print("   Selected: Other Digital Goods")
+            options_to_try = [
+                "Digital books sold to an end user with rights for permanent use",
+                "Digital books",
+                "Other Digital Goods - No Physical Media",
+                "Other Digital Goods"
+            ]
+
+            for option_text in options_to_try:
+                try:
+                    tax_option = page.get_by_text(option_text, exact=False).first
+                    if await tax_option.is_visible(timeout=1000):
+                        await tax_option.click()
+                        print(f"   Selected: {option_text[:40]}...")
+                        break
+                except:
+                    continue
         else:
             print("   Tax code dropdown not found")
     except Exception as e:
@@ -343,6 +370,68 @@ async def upload_product(page, product, pdf_folder):
             print(f"   Checked {grade}")
         except:
             pass
+
+    # Step 8b: Add Subject Area tags
+    print("Step 8b: Adding Subject Area tags...")
+    subject_tags = ["Close Reading", "Reading", "Informational Text"]
+    try:
+        # Click on the Subject Area input field
+        subject_input = page.locator('[placeholder*="Subject"], [aria-label*="Subject Area"] input, input[name*="subject"]').first
+        if not await subject_input.is_visible(timeout=2000):
+            # Try finding by label
+            subject_section = page.locator('text="Subject Area"').locator('..').locator('input, [contenteditable="true"]').first
+            if await subject_section.is_visible(timeout=2000):
+                subject_input = subject_section
+
+        for tag in subject_tags:
+            try:
+                await subject_input.click()
+                await subject_input.fill(tag)
+                await asyncio.sleep(0.5)
+                # Press Enter or click the suggestion
+                await page.keyboard.press("Enter")
+                await asyncio.sleep(0.3)
+                print(f"   Added subject: {tag}")
+            except Exception as e:
+                # Try clicking directly on the option if it appears
+                try:
+                    option = page.locator(f'text="{tag}"').first
+                    await option.click()
+                    print(f"   Clicked subject: {tag}")
+                except:
+                    pass
+    except Exception as e:
+        print(f"   Could not add subjects: {e}")
+
+    # Step 8c: Add Theme/Audience tags
+    print("Step 8c: Adding Theme/Audience tags...")
+    theme_tags = ["Homeschool", "Activities", "Bell Ringers", "Independent Work Packet", "Worksheets"]
+    try:
+        # Click on the Tag input field
+        tag_input = page.locator('[placeholder*="Tag"], [aria-label*="Tag"] input, input[name*="tag"]').first
+        if not await tag_input.is_visible(timeout=2000):
+            # Try finding by section
+            tag_section = page.locator('text="Tag"').locator('..').locator('input, [contenteditable="true"]').first
+            if await tag_section.is_visible(timeout=2000):
+                tag_input = tag_section
+
+        for tag in theme_tags:
+            try:
+                await tag_input.click()
+                await tag_input.fill(tag)
+                await asyncio.sleep(0.5)
+                await page.keyboard.press("Enter")
+                await asyncio.sleep(0.3)
+                print(f"   Added tag: {tag}")
+            except Exception as e:
+                try:
+                    option = page.locator(f'text="{tag}"').first
+                    await option.click()
+                    print(f"   Clicked tag: {tag}")
+                except:
+                    pass
+    except Exception as e:
+        print(f"   Could not add tags: {e}")
 
     # Step 9: Uncheck "Make Listing Active" for draft
     if SAVE_AS_DRAFT:
