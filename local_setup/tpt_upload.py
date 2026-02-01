@@ -390,8 +390,8 @@ async def upload_product(page, product, pdf_folder):
 
     # Click directly below "Tag (Theme, Audience, Language)" label
     try:
-        # Find the Tag label - it has "Theme, Audience" in parentheses
-        tag_label = page.locator('text="Tag"').filter(has_text="Required").first
+        # Find the Tag label by looking for "Theme" text
+        tag_label = page.locator('text="Theme, Audience"').first
         box = await tag_label.bounding_box()
         if box:
             click_x = box['x'] + 150
