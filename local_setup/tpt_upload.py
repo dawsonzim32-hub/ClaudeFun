@@ -123,43 +123,64 @@ async def upload_product(page, product, pdf_folder):
 
     # Step 2: Click "Add New Product" button
     print("Step 2: Clicking Add New Product...")
+    print(f"   Current URL: {page.url}")
     await page.screenshot(path="step2_my_products.png")
+
+    # Wait a bit more for page to settle
+    await asyncio.sleep(3)
 
     add_clicked = False
 
-    # Try the most reliable method first - get_by_role for link (it's a green button/link)
+    # Method 1: Try JavaScript click directly (most reliable)
     try:
-        add_btn = page.get_by_role("link", name="Add New Product")
-        if await add_btn.is_visible(timeout=5000):
-            await add_btn.click()
+        result = await page.evaluate('''() => {
+            const links = document.querySelectorAll('a');
+            for (let link of links) {
+                if (link.textContent.includes('Add New Product')) {
+                    link.click();
+                    return 'clicked';
+                }
+            }
+            return 'not found';
+        }''')
+        if result == 'clicked':
             add_clicked = True
-            print("   Clicked using get_by_role link")
-    except:
-        pass
+            print("   Clicked using JavaScript")
+    except Exception as e:
+        print(f"   JS click failed: {e}")
 
+    # Method 2: get_by_role for link
     if not add_clicked:
         try:
-            add_btn = page.get_by_role("button", name="Add New Product")
+            add_btn = page.get_by_role("link", name="Add New Product")
             if await add_btn.is_visible(timeout=3000):
                 await add_btn.click()
                 add_clicked = True
-                print("   Clicked using get_by_role button")
+                print("   Clicked using get_by_role link")
         except:
             pass
 
+    # Method 3: locator with href
     if not add_clicked:
         try:
-            add_btn = page.get_by_text("Add New Product", exact=True)
+            add_btn = page.locator('a[href*="add"]').filter(has_text="Add New Product").first
             if await add_btn.is_visible(timeout=3000):
                 await add_btn.click()
                 add_clicked = True
-                print("   Clicked using get_by_text")
+                print("   Clicked using href locator")
         except:
             pass
 
     if not add_clicked:
         print("ERROR: Could not find Add New Product button")
+        print("   Taking error screenshot...")
         await page.screenshot(path="error_add_product.png")
+        # Print page content for debugging
+        content = await page.content()
+        if "Add New Product" in content:
+            print("   NOTE: 'Add New Product' text IS in page HTML")
+        else:
+            print("   NOTE: 'Add New Product' text NOT in page HTML")
         return False
 
     # Wait for page to fully load
