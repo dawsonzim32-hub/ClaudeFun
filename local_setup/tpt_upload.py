@@ -35,7 +35,8 @@ TPT_PASSWORD = "9704418dz"
 # Settings
 SAVE_AS_DRAFT = False  # True = save as draft, False = publish immediately
 HEADLESS = False  # False = show browser window, True = run invisibly
-DELAY_BETWEEN_UPLOADS = 3  # seconds between each upload
+DELAY_BETWEEN_UPLOADS = 5  # seconds between each upload (increased for safety)
+MAX_RETRIES = 1  # Number of times to retry a failed product
 
 # Use persistent browser profile to save login session
 USER_DATA_DIR = os.path.join(os.path.dirname(__file__), "browser_data")
@@ -473,6 +474,17 @@ async def upload_product(page, product, pdf_folder):
 
     await asyncio.sleep(2)
     await page.screenshot(path=f"final_{filename.replace('.pdf', '')}.png")
+
+    # Check for error pages (404, 500, etc.) and recover
+    try:
+        page_content = await page.content()
+        if "404" in page_content or "error" in page_content.lower() or "something went wrong" in page_content.lower():
+            print("   WARNING: Error page detected, refreshing...")
+            await page.goto("https://www.teacherspayteachers.com/My-Products")
+            await asyncio.sleep(3)
+    except:
+        pass
+
     print("   Product submission complete!")
 
     print(f"Completed: {filename}")
@@ -485,6 +497,7 @@ async def main():
     parser = argparse.ArgumentParser(description='TPT Bulk Uploader')
     parser.add_argument('--dry-run', action='store_true', help='Validate without uploading')
     parser.add_argument('--product', type=int, help='Upload only this product number (e.g., 41)')
+    parser.add_argument('--start', type=int, help='Start from this product number (e.g., --start 44 to resume from #44)')
     args = parser.parse_args()
 
     # Load products from CSV
@@ -509,6 +522,13 @@ async def main():
             print(f"ERROR: Product #{args.product} not found")
             sys.exit(1)
         print(f"Filtered to product #{args.product}: {products[0]['filename']}")
+
+    # Start from specific product number if requested
+    if args.start:
+        original_count = len(products)
+        products = [p for p in products if int(p['filename'][:3]) >= args.start]
+        skipped = original_count - len(products)
+        print(f"Starting from product #{args.start} (skipping {skipped} products)")
 
     # Validate files exist
     print("\nValidating files...")
@@ -559,21 +579,38 @@ async def main():
         # Upload each product
         successful = 0
         failed = 0
+        failed_products = []
 
         for i, product in enumerate(products, 1):
             print(f"\n[{i}/{len(products)}] Processing {product['filename']}...")
 
-            try:
-                result = await upload_product(page, product, PDF_FOLDER)
-                if result:
-                    successful += 1
-                else:
-                    failed += 1
-            except Exception as e:
-                print(f"ERROR uploading {product['filename']}: {e}")
-                import traceback
-                traceback.print_exc()
+            # Try upload with retry
+            upload_success = False
+            for attempt in range(MAX_RETRIES + 1):
+                try:
+                    result = await upload_product(page, product, PDF_FOLDER)
+                    if result:
+                        upload_success = True
+                        break
+                    else:
+                        if attempt < MAX_RETRIES:
+                            print(f"   Retrying... (attempt {attempt + 2})")
+                            # Refresh page before retry
+                            await page.goto("https://www.teacherspayteachers.com/My-Products")
+                            await asyncio.sleep(3)
+                except Exception as e:
+                    print(f"ERROR uploading {product['filename']}: {e}")
+                    if attempt < MAX_RETRIES:
+                        print(f"   Retrying... (attempt {attempt + 2})")
+                        # Refresh page before retry
+                        await page.goto("https://www.teacherspayteachers.com/My-Products")
+                        await asyncio.sleep(3)
+
+            if upload_success:
+                successful += 1
+            else:
                 failed += 1
+                failed_products.append(product['filename'])
 
             # Delay between uploads
             if i < len(products):
@@ -582,6 +619,10 @@ async def main():
 
         print(f"\n{'='*60}")
         print(f"COMPLETE: {successful} successful, {failed} failed")
+        if failed_products:
+            print(f"Failed products:")
+            for fp in failed_products:
+                print(f"  - {fp}")
         print(f"{'='*60}")
 
         await context.close()
