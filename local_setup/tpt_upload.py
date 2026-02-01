@@ -338,11 +338,65 @@ async def upload_product(page, product, pdf_folder):
         submit_btn = page.get_by_role("button", name="Submit")
         await submit_btn.click()
         await asyncio.sleep(3)
-        print("   Submitted!")
-        await page.screenshot(path=f"after_submit_{filename.replace('.pdf', '')}.png")
+        print("   Clicked Submit")
     except Exception as e:
         print(f"ERROR: Could not submit: {e}")
         return False
+
+    # Step 11: Handle Tax Code dropdown if it appears
+    print("Step 11: Checking for Tax Code dropdown...")
+    await page.screenshot(path=f"after_submit_{filename.replace('.pdf', '')}.png")
+    try:
+        # Wait a moment for any modal/dropdown to appear
+        await asyncio.sleep(2)
+
+        # Look for tax code dropdown or select
+        tax_dropdown = page.locator('select, [role="listbox"], [class*="dropdown"], [class*="select"]').first
+        if await tax_dropdown.is_visible(timeout=3000):
+            print("   Tax code dropdown found")
+            # Try to select an educational/digital option
+            try:
+                # Try clicking the dropdown first
+                await tax_dropdown.click()
+                await asyncio.sleep(1)
+
+                # Look for educational materials or similar option
+                options_to_try = [
+                    'text="Educational Materials"',
+                    'text="Digital Goods"',
+                    'text="Books"',
+                    'text="General"',
+                    '[role="option"]'
+                ]
+                for opt in options_to_try:
+                    try:
+                        option = page.locator(opt).first
+                        if await option.is_visible(timeout=1000):
+                            await option.click()
+                            print(f"   Selected tax code option")
+                            break
+                    except:
+                        continue
+            except Exception as e:
+                print(f"   Could not select tax code: {e}")
+
+            # Look for a confirm/save/continue button after tax code
+            await asyncio.sleep(1)
+            for btn_text in ["Save", "Continue", "Confirm", "OK", "Submit"]:
+                try:
+                    btn = page.get_by_role("button", name=btn_text)
+                    if await btn.is_visible(timeout=1000):
+                        await btn.click()
+                        print(f"   Clicked {btn_text}")
+                        break
+                except:
+                    continue
+    except:
+        print("   No tax code dropdown found (continuing)")
+
+    await asyncio.sleep(2)
+    await page.screenshot(path=f"final_{filename.replace('.pdf', '')}.png")
+    print("   Product submission complete!")
 
     print(f"Completed: {filename}")
     return True
