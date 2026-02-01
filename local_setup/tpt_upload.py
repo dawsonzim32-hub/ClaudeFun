@@ -344,84 +344,126 @@ async def upload_product(page, product, pdf_folder):
         except:
             pass
 
-    # Step 8b: Add Subject Area tags using JavaScript
+    # Step 8b: Add Subject Area tags
     print("Step 8b: Adding Subject Area tags...")
     subject_tags = ["Close Reading", "Reading", "Informational Text"]
+    await page.screenshot(path="step8b_before_subjects.png")
+
+    # Scroll to make sure Categories section is visible
+    await page.evaluate('window.scrollTo(0, document.body.scrollHeight / 2)')
+    await asyncio.sleep(1)
+
+    # Try to click directly on the Subject Area input box
     try:
-        # Use JavaScript to find all inputs on page
-        all_inputs = await page.query_selector_all('input')
-        print(f"   Found {len(all_inputs)} input fields on page")
+        # Look for the input box in the Subject Area section
+        # The box likely has placeholder text or is an empty input area
+        subject_found = False
 
-        # Take screenshot to see what we're working with
-        await page.screenshot(path="step8b_before_subjects.png")
+        # Method 1: Try clicking the area after "Subject Area Required" text
+        try:
+            subject_label = page.locator('text="Subject Area"').first
+            # Get the parent container and find clickable input area
+            subject_container = subject_label.locator('xpath=../..')
+            subject_input = subject_container.locator('input, [role="combobox"], [contenteditable="true"]').first
+            if await subject_input.is_visible(timeout=2000):
+                await subject_input.click()
+                subject_found = True
+                print("   Found Subject Area input (method 1)")
+        except:
+            pass
 
-        # Find input near "Subject Area" text
-        subject_input = await page.evaluate('''() => {
-            const labels = document.querySelectorAll('*');
-            for (let el of labels) {
-                if (el.textContent.includes('Subject Area') && el.textContent.length < 50) {
-                    // Found the label, now find nearby input
-                    let parent = el.parentElement;
-                    for (let i = 0; i < 5; i++) {
-                        const input = parent.querySelector('input');
-                        if (input) {
-                            input.focus();
-                            return true;
-                        }
-                        parent = parent.parentElement;
-                        if (!parent) break;
-                    }
-                }
-            }
-            return false;
-        }''')
+        # Method 2: Look for any input with placeholder containing "subject" or "search"
+        if not subject_found:
+            try:
+                inputs = page.locator('input[placeholder*="earch"], input[placeholder*="ubject"], input[placeholder*="elect"]')
+                count = await inputs.count()
+                print(f"   Found {count} search/select inputs")
+                if count >= 1:
+                    await inputs.nth(0).click()
+                    subject_found = True
+                    print("   Found Subject Area input (method 2)")
+            except:
+                pass
 
-        if subject_input:
+        # Method 3: Click directly below the "Subject Area" text
+        if not subject_found:
+            try:
+                box = await page.locator('text="Subject Area"').first.bounding_box()
+                if box:
+                    # Click 50 pixels below the label
+                    await page.mouse.click(box['x'] + 100, box['y'] + 50)
+                    subject_found = True
+                    print("   Clicked below Subject Area label (method 3)")
+            except:
+                pass
+
+        if subject_found:
+            await asyncio.sleep(0.5)
             for tag in subject_tags:
                 await page.keyboard.type(tag)
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(0.8)
                 await page.keyboard.press("Enter")
                 await asyncio.sleep(0.5)
                 print(f"   Added subject: {tag}")
         else:
-            print("   Could not find Subject Area input")
+            print("   WARNING: Could not find Subject Area input")
+
     except Exception as e:
         print(f"   Subject tags error: {e}")
 
-    # Step 8c: Add Theme/Audience tags using JavaScript
+    # Step 8c: Add Theme/Audience tags
     print("Step 8c: Adding Theme/Audience tags...")
     theme_tags = ["Homeschool", "Activities", "Bell Ringers", "Independent Work Packet", "Worksheets"]
-    try:
-        # Find input near "Tag" label (Theme, Audience, Language)
-        tag_input = await page.evaluate('''() => {
-            const labels = document.querySelectorAll('*');
-            for (let el of labels) {
-                if (el.textContent.includes('Theme, Audience') ||
-                    (el.textContent.includes('Tag') && el.textContent.includes('Required'))) {
-                    let parent = el.parentElement;
-                    for (let i = 0; i < 5; i++) {
-                        const input = parent.querySelector('input');
-                        if (input) {
-                            input.focus();
-                            return true;
-                        }
-                        parent = parent.parentElement;
-                        if (!parent) break;
-                    }
-                }
-            }
-            return false;
-        }''')
 
-        if tag_input:
+    try:
+        tag_found = False
+
+        # Method 1: Find input in Tag section
+        try:
+            tag_label = page.locator('text="Tag"').first
+            tag_container = tag_label.locator('xpath=../..')
+            tag_input = tag_container.locator('input, [role="combobox"], [contenteditable="true"]').first
+            if await tag_input.is_visible(timeout=2000):
+                await tag_input.click()
+                tag_found = True
+                print("   Found Tag input (method 1)")
+        except:
+            pass
+
+        # Method 2: Look for second search input (first one was Subject Area)
+        if not tag_found:
+            try:
+                inputs = page.locator('input[placeholder*="earch"], input[placeholder*="elect"]')
+                count = await inputs.count()
+                if count >= 2:
+                    await inputs.nth(1).click()
+                    tag_found = True
+                    print("   Found Tag input (method 2)")
+            except:
+                pass
+
+        # Method 3: Click below the "Tag" text
+        if not tag_found:
+            try:
+                box = await page.locator('text="Theme, Audience"').first.bounding_box()
+                if box:
+                    await page.mouse.click(box['x'] + 100, box['y'] + 50)
+                    tag_found = True
+                    print("   Clicked below Tag label (method 3)")
+            except:
+                pass
+
+        if tag_found:
+            await asyncio.sleep(0.5)
             for tag in theme_tags:
                 await page.keyboard.type(tag)
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(0.8)
                 await page.keyboard.press("Enter")
                 await asyncio.sleep(0.5)
                 print(f"   Added tag: {tag}")
         else:
-            print("   Could not find Tag input")
+            print("   WARNING: Could not find Tag input")
+
     except Exception as e:
         print(f"   Theme tags error: {e}")
 
