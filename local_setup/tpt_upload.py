@@ -344,66 +344,86 @@ async def upload_product(page, product, pdf_folder):
         except:
             pass
 
-    # Step 8b: Add Subject Area tags
+    # Step 8b: Add Subject Area tags using JavaScript
     print("Step 8b: Adding Subject Area tags...")
     subject_tags = ["Close Reading", "Reading", "Informational Text"]
     try:
-        # Find the Subject Area section and click into it
-        subject_box = page.locator('text="Subject Area"').locator('..').locator('input').first
+        # Use JavaScript to find all inputs on page
+        all_inputs = await page.query_selector_all('input')
+        print(f"   Found {len(all_inputs)} input fields on page")
 
-        for tag in subject_tags:
-            await subject_box.click()
-            await asyncio.sleep(0.3)
-            await page.keyboard.type(tag)
-            await asyncio.sleep(0.5)
-            await page.keyboard.press("Enter")
-            await asyncio.sleep(0.3)
-            print(f"   Added subject: {tag}")
-    except Exception as e:
-        print(f"   Could not add subjects: {e}")
-        # Try alternate approach - look for any input in Subject section
-        try:
-            await page.click('text="Subject Area"')
-            await asyncio.sleep(0.5)
+        # Take screenshot to see what we're working with
+        await page.screenshot(path="step8b_before_subjects.png")
+
+        # Find input near "Subject Area" text
+        subject_input = await page.evaluate('''() => {
+            const labels = document.querySelectorAll('*');
+            for (let el of labels) {
+                if (el.textContent.includes('Subject Area') && el.textContent.length < 50) {
+                    // Found the label, now find nearby input
+                    let parent = el.parentElement;
+                    for (let i = 0; i < 5; i++) {
+                        const input = parent.querySelector('input');
+                        if (input) {
+                            input.focus();
+                            return true;
+                        }
+                        parent = parent.parentElement;
+                        if (!parent) break;
+                    }
+                }
+            }
+            return false;
+        }''')
+
+        if subject_input:
             for tag in subject_tags:
                 await page.keyboard.type(tag)
-                await asyncio.sleep(0.3)
+                await asyncio.sleep(0.5)
                 await page.keyboard.press("Enter")
-                await asyncio.sleep(0.3)
-                print(f"   Added subject (alt): {tag}")
-        except:
-            pass
+                await asyncio.sleep(0.5)
+                print(f"   Added subject: {tag}")
+        else:
+            print("   Could not find Subject Area input")
+    except Exception as e:
+        print(f"   Subject tags error: {e}")
 
-    # Step 8c: Add Theme/Audience tags
+    # Step 8c: Add Theme/Audience tags using JavaScript
     print("Step 8c: Adding Theme/Audience tags...")
     theme_tags = ["Homeschool", "Activities", "Bell Ringers", "Independent Work Packet", "Worksheets"]
     try:
-        # Find the Tag section - look for the label then find input nearby
-        tag_box = page.locator('text="Tag"').first.locator('..').locator('input').first
+        # Find input near "Tag" label (Theme, Audience, Language)
+        tag_input = await page.evaluate('''() => {
+            const labels = document.querySelectorAll('*');
+            for (let el of labels) {
+                if (el.textContent.includes('Theme, Audience') ||
+                    (el.textContent.includes('Tag') && el.textContent.includes('Required'))) {
+                    let parent = el.parentElement;
+                    for (let i = 0; i < 5; i++) {
+                        const input = parent.querySelector('input');
+                        if (input) {
+                            input.focus();
+                            return true;
+                        }
+                        parent = parent.parentElement;
+                        if (!parent) break;
+                    }
+                }
+            }
+            return false;
+        }''')
 
-        for tag in theme_tags:
-            await tag_box.click()
-            await asyncio.sleep(0.3)
-            await page.keyboard.type(tag)
-            await asyncio.sleep(0.5)
-            await page.keyboard.press("Enter")
-            await asyncio.sleep(0.3)
-            print(f"   Added tag: {tag}")
-    except Exception as e:
-        print(f"   Could not add tags: {e}")
-        # Try alternate approach
-        try:
-            # Find by the "(Theme, Audience, Language)" text
-            await page.click('text="Theme, Audience"')
-            await asyncio.sleep(0.5)
+        if tag_input:
             for tag in theme_tags:
                 await page.keyboard.type(tag)
-                await asyncio.sleep(0.3)
+                await asyncio.sleep(0.5)
                 await page.keyboard.press("Enter")
-                await asyncio.sleep(0.3)
-                print(f"   Added tag (alt): {tag}")
-        except:
-            pass
+                await asyncio.sleep(0.5)
+                print(f"   Added tag: {tag}")
+        else:
+            print("   Could not find Tag input")
+    except Exception as e:
+        print(f"   Theme tags error: {e}")
 
     # Step 9: Uncheck "Make Listing Active" for draft
     if SAVE_AS_DRAFT:
