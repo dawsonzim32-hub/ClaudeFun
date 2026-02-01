@@ -354,8 +354,8 @@ async def upload_product(page, product, pdf_folder):
 
     for tag in subject_tags:
         try:
-            # Click the Subject Area box to open dropdown
-            await page.click('text="Subject Area"')
+            # Click the Subject Area dropdown box
+            await page.click('text="Select up to three subject areas"')
             await asyncio.sleep(0.5)
 
             # Click the tag option from the dropdown
@@ -371,8 +371,8 @@ async def upload_product(page, product, pdf_folder):
 
     for tag in theme_tags:
         try:
-            # Click the Tag box to open dropdown
-            await page.click('text="Theme, Audience"')
+            # Click the Tag dropdown box
+            await page.click('text="Select up to six tags"')
             await asyncio.sleep(0.5)
 
             # Click the tag option from the dropdown
