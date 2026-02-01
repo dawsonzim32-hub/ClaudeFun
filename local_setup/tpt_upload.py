@@ -58,15 +58,14 @@ async def login_to_tpt(page):
     # Try multiple selectors for email field
     print("Looking for email field...")
     email_selectors = [
+        'input[placeholder="Email or username"]',
+        'input[placeholder*="Email"]',
+        'input[placeholder*="email"]',
+        'input[placeholder*="username"]',
         'input[name="email"]',
         'input[type="email"]',
-        'input[id="email"]',
-        'input[placeholder*="email" i]',
-        'input[placeholder*="Email" i]',
-        '#email',
-        '[data-testid="email-input"]',
-        'input[autocomplete="email"]',
-        'input[autocomplete="username"]'
+        'input[type="text"]',
+        '#email'
     ]
 
     email_filled = False
@@ -99,11 +98,11 @@ async def login_to_tpt(page):
     # Try multiple selectors for password field
     print("Looking for password field...")
     password_selectors = [
-        'input[name="password"]',
+        'input[placeholder="Password"]',
         'input[type="password"]',
+        'input[name="password"]',
         'input[id="password"]',
-        '#password',
-        '[data-testid="password-input"]'
+        '#password'
     ]
 
     password_filled = False
@@ -127,13 +126,11 @@ async def login_to_tpt(page):
 
     # Try multiple selectors for submit button
     submit_selectors = [
-        'button[type="submit"]',
-        'input[type="submit"]',
+        'button:has-text("Log in")',
         'button:has-text("Log In")',
         'button:has-text("Login")',
-        'button:has-text("Sign In")',
-        'button:has-text("Sign in")',
-        '[data-testid="login-button"]'
+        'button[type="submit"]',
+        'input[type="submit"]'
     ]
 
     for selector in submit_selectors:
