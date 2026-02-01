@@ -33,7 +33,7 @@ TPT_EMAIL = "dzimmerman@wesleyanschool.org"
 TPT_PASSWORD = "9704418dz"
 
 # Settings
-SAVE_AS_DRAFT = True  # True = save as draft, False = publish immediately
+SAVE_AS_DRAFT = False  # True = save as draft, False = publish immediately
 HEADLESS = False  # False = show browser window, True = run invisibly
 DELAY_BETWEEN_UPLOADS = 3  # seconds between each upload
 
