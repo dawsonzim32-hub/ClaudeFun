@@ -115,16 +115,49 @@ async def upload_product(page, product, pdf_folder):
     print(f"Uploading: {title[:50]}...")
     print(f"{'='*60}")
 
-    # Step 1: Go to product type selection page
-    print("Step 1: Going to product type selection...")
-    await page.goto("https://www.teacherspayteachers.com/My-Products/add")
+    # Step 1: Go to My Products page
+    print("Step 1: Going to My Products...")
+    await page.goto("https://www.teacherspayteachers.com/My-Products")
     await page.wait_for_load_state("networkidle")
     await asyncio.sleep(2)
 
-    # Step 2: Click "Digital Download" button
-    print("Step 2: Clicking Digital Download...")
-    await page.screenshot(path="step2_before_click.png")
-    print("   Screenshot saved: step2_before_click.png")
+    # Step 2: Click "Add New Product" button
+    print("Step 2: Clicking Add New Product...")
+    await page.screenshot(path="step2_my_products.png")
+
+    add_clicked = False
+    add_selectors = [
+        'text="Add New Product"',
+        'a:has-text("Add New Product")',
+        'button:has-text("Add New Product")',
+        'text="Add Product"',
+        'a:has-text("Add Product")',
+        '[href*="add"]',
+        'text="New Product"',
+    ]
+
+    for selector in add_selectors:
+        try:
+            element = page.locator(selector).first
+            if await element.is_visible(timeout=2000):
+                await element.click()
+                add_clicked = True
+                print(f"   Clicked: {selector}")
+                break
+        except:
+            continue
+
+    if not add_clicked:
+        print("ERROR: Could not find Add New Product button")
+        await page.screenshot(path="error_add_product.png")
+        return False
+
+    await page.wait_for_load_state("networkidle")
+    await asyncio.sleep(2)
+
+    # Step 3: Click "Digital Download" button
+    print("Step 3: Clicking Digital Download...")
+    await page.screenshot(path="step3_product_type.png")
 
     # Try multiple selectors for the Digital Download option
     clicked = False
@@ -173,8 +206,8 @@ async def upload_product(page, product, pdf_folder):
     await page.wait_for_load_state("networkidle")
     await asyncio.sleep(2)
 
-    # Step 3: Fill in title
-    print("Step 3: Setting title...")
+    # Step 4: Fill in title
+    print("Step 4: Setting title...")
     try:
         title_input = page.get_by_placeholder("Name your product")
         await title_input.fill(title[:80])
@@ -182,8 +215,8 @@ async def upload_product(page, product, pdf_folder):
     except Exception as e:
         print(f"WARNING: Could not set title: {e}")
 
-    # Step 4: Upload PDF file
-    print("Step 4: Uploading PDF file...")
+    # Step 5: Upload PDF file
+    print("Step 5: Uploading PDF file...")
     pdf_path = os.path.join(pdf_folder, filename)
     if not os.path.exists(pdf_path):
         print(f"ERROR: File not found: {pdf_path}")
@@ -197,8 +230,8 @@ async def upload_product(page, product, pdf_folder):
     except Exception as e:
         print(f"WARNING: File upload issue: {e}")
 
-    # Step 5: Fill description (rich text editor)
-    print("Step 5: Setting description...")
+    # Step 6: Fill description (rich text editor)
+    print("Step 6: Setting description...")
     try:
         desc_editor = page.locator('[contenteditable="true"]').first
         await desc_editor.click()
@@ -207,8 +240,8 @@ async def upload_product(page, product, pdf_folder):
     except Exception as e:
         print(f"WARNING: Could not set description: {e}")
 
-    # Step 6: Set price
-    print("Step 6: Setting price...")
+    # Step 7: Set price
+    print("Step 7: Setting price...")
     try:
         price_inputs = page.locator('input[placeholder="0.00"]')
         await price_inputs.first.fill(str(price))
@@ -216,8 +249,8 @@ async def upload_product(page, product, pdf_folder):
     except Exception as e:
         print(f"WARNING: Could not set price: {e}")
 
-    # Step 7: Select grades 4-8
-    print("Step 7: Selecting grades 4-8...")
+    # Step 8: Select grades 4-8
+    print("Step 8: Selecting grades 4-8...")
     for grade in ["4th Grade", "5th Grade", "6th Grade", "7th Grade", "8th Grade"]:
         try:
             checkbox = page.get_by_label(grade)
@@ -226,9 +259,9 @@ async def upload_product(page, product, pdf_folder):
         except:
             pass
 
-    # Step 8: Uncheck "Make Listing Active" for draft
+    # Step 9: Uncheck "Make Listing Active" for draft
     if SAVE_AS_DRAFT:
-        print("Step 8: Setting to draft mode...")
+        print("Step 9: Setting to draft mode...")
         try:
             active_checkbox = page.get_by_label("Make Listing Active")
             if await active_checkbox.is_checked():
@@ -239,8 +272,8 @@ async def upload_product(page, product, pdf_folder):
 
     await page.screenshot(path=f"before_submit_{filename.replace('.pdf', '')}.png")
 
-    # Step 9: Click Submit
-    print("Step 9: Clicking Submit...")
+    # Step 10: Click Submit
+    print("Step 10: Clicking Submit...")
     try:
         submit_btn = page.get_by_role("button", name="Submit")
         await submit_btn.click()
