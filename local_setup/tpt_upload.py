@@ -115,76 +115,102 @@ async def upload_product(page, product, pdf_folder):
     print(f"Uploading: {title[:50]}...")
     print(f"{'='*60}")
 
-    # Navigate to new product page
-    print("Step 1: Going to product creation page...")
+    # Step 1: Go to product type selection page
+    print("Step 1: Going to product type selection...")
     await page.goto("https://www.teacherspayteachers.com/My-Products/add")
     await page.wait_for_load_state("networkidle")
     await asyncio.sleep(2)
 
-    # Take screenshot for debugging
-    await page.screenshot(path=f"screenshot_{filename.replace('.pdf', '')}.png")
+    # Step 2: Click "Digital Download" button
+    print("Step 2: Clicking Digital Download...")
+    try:
+        digital_btn = page.locator('a:has-text("Digital Download"), button:has-text("Digital Download")').first
+        await digital_btn.click()
+        await page.wait_for_load_state("networkidle")
+        await asyncio.sleep(2)
+        print("   Clicked Digital Download")
+    except Exception as e:
+        print(f"ERROR: Could not click Digital Download: {e}")
+        await page.screenshot(path="error_step2.png")
+        return False
 
-    # Upload the PDF file
-    print("Step 2: Uploading PDF file...")
+    # Step 3: Fill in title
+    print("Step 3: Setting title...")
+    try:
+        title_input = page.get_by_placeholder("Name your product")
+        await title_input.fill(title[:80])
+        print(f"   Title: {title[:50]}...")
+    except Exception as e:
+        print(f"WARNING: Could not set title: {e}")
+
+    # Step 4: Upload PDF file
+    print("Step 4: Uploading PDF file...")
     pdf_path = os.path.join(pdf_folder, filename)
     if not os.path.exists(pdf_path):
         print(f"ERROR: File not found: {pdf_path}")
         return False
 
-    # Find file input and upload
-    file_inputs = page.locator('input[type="file"]')
-    count = await file_inputs.count()
-    if count > 0:
-        await file_inputs.first.set_input_files(pdf_path)
+    try:
+        file_input = page.locator('input[type="file"]').first
+        await file_input.set_input_files(pdf_path)
         print(f"   Uploaded: {filename}")
-        await asyncio.sleep(3)  # Wait for upload to process
-    else:
-        print("WARNING: Could not find file upload input")
+        await asyncio.sleep(5)  # Wait for upload
+    except Exception as e:
+        print(f"WARNING: File upload issue: {e}")
 
-    # Fill in title
-    print("Step 3: Setting title...")
-    title_input = page.locator('input[name="title"], input[name*="title"], #title').first
-    if await title_input.count() > 0:
-        await title_input.fill(title[:80])  # TPT max is 80 chars
-        print(f"   Title set: {title[:50]}...")
-
-    # Fill in description
-    print("Step 4: Setting description...")
-    desc_input = page.locator('textarea[name="description"], textarea[name*="description"], #description').first
-    if await desc_input.count() > 0:
-        await desc_input.fill(description)
+    # Step 5: Fill description (rich text editor)
+    print("Step 5: Setting description...")
+    try:
+        desc_editor = page.locator('[contenteditable="true"]').first
+        await desc_editor.click()
+        await desc_editor.fill(description)
         print("   Description set")
+    except Exception as e:
+        print(f"WARNING: Could not set description: {e}")
 
-    # Set price
-    print("Step 5: Setting price...")
-    price_input = page.locator('input[name="price"], input[name*="price"], #price').first
-    if await price_input.count() > 0:
-        await price_input.fill(str(price))
-        print(f"   Price set: ${price}")
+    # Step 6: Set price
+    print("Step 6: Setting price...")
+    try:
+        price_inputs = page.locator('input[placeholder="0.00"]')
+        await price_inputs.first.fill(str(price))
+        print(f"   Price: ${price}")
+    except Exception as e:
+        print(f"WARNING: Could not set price: {e}")
 
-    # Try to select grade levels
-    print("Step 6: Selecting grades...")
-    grade_range = grades.split('-')
-    if len(grade_range) == 2:
-        for g in range(int(grade_range[0]), int(grade_range[1]) + 1):
-            grade_label = page.locator(f'label:has-text("Grade {g}"), label:has-text("{g}th Grade")').first
-            if await grade_label.count() > 0:
-                await grade_label.click()
-                print(f"   Selected grade {g}")
+    # Step 7: Select grades 4-8
+    print("Step 7: Selecting grades 4-8...")
+    for grade in ["4th Grade", "5th Grade", "6th Grade", "7th Grade", "8th Grade"]:
+        try:
+            checkbox = page.get_by_label(grade)
+            await checkbox.check()
+            print(f"   Checked {grade}")
+        except:
+            pass
 
-    # Take screenshot before saving
-    await page.screenshot(path=f"before_save_{filename.replace('.pdf', '')}.png")
-
-    # Save as draft
+    # Step 8: Uncheck "Make Listing Active" for draft
     if SAVE_AS_DRAFT:
-        print("Step 7: Saving as draft...")
-        draft_btn = page.locator('button:has-text("Save Draft"), button:has-text("Save as Draft")').first
-        if await draft_btn.count() > 0:
-            await draft_btn.click()
-            await asyncio.sleep(2)
-            print("   Saved as draft!")
-        else:
-            print("WARNING: Could not find Save Draft button")
+        print("Step 8: Setting to draft mode...")
+        try:
+            active_checkbox = page.get_by_label("Make Listing Active")
+            if await active_checkbox.is_checked():
+                await active_checkbox.uncheck()
+                print("   Unchecked - will save as draft")
+        except Exception as e:
+            print(f"WARNING: Could not set draft mode: {e}")
+
+    await page.screenshot(path=f"before_submit_{filename.replace('.pdf', '')}.png")
+
+    # Step 9: Click Submit
+    print("Step 9: Clicking Submit...")
+    try:
+        submit_btn = page.get_by_role("button", name="Submit")
+        await submit_btn.click()
+        await asyncio.sleep(3)
+        print("   Submitted!")
+        await page.screenshot(path=f"after_submit_{filename.replace('.pdf', '')}.png")
+    except Exception as e:
+        print(f"ERROR: Could not submit: {e}")
+        return False
 
     print(f"Completed: {filename}")
     return True
