@@ -344,49 +344,65 @@ async def upload_product(page, product, pdf_folder):
         except:
             pass
 
-    # Step 8b: Add Subject Area tags (treat as dropdown)
+    # Step 8b: Add Subject Area tags
     print("Step 8b: Adding Subject Area tags...")
     subject_tags = ["Close Reading", "Reading", "Informational Text"]
 
-    # Scroll down to Categories section
-    await page.evaluate('window.scrollTo(0, 600)')
+    # Scroll to make sure Categories section is visible
+    await page.evaluate('window.scrollTo(0, 700)')
     await asyncio.sleep(1)
+    await page.screenshot(path="before_tags.png")
+    print("   Screenshot saved: before_tags.png - check where to click")
 
-    for tag in subject_tags:
-        try:
-            # Click the Subject Area dropdown to open it
-            subject_dropdown = page.locator('text="Subject Area"').locator('..').locator('..').locator('[class*="select"], [class*="dropdown"], [role="combobox"], input').first
-            await subject_dropdown.click()
-            await asyncio.sleep(0.5)
+    # Simply click directly on the Subject Area box area
+    # Based on the screenshot, Subject Area is on the left side
+    try:
+        box = await page.locator('text="Subject Area"').first.bounding_box()
+        if box:
+            # Click inside the input box (below and to the right of the label)
+            click_x = box['x'] + 100
+            click_y = box['y'] + 45
+            print(f"   Subject Area label at ({box['x']}, {box['y']})")
+            print(f"   Clicking at ({click_x}, {click_y})")
+            await page.mouse.click(click_x, click_y)
+            await asyncio.sleep(1)
+            await page.screenshot(path="after_subject_click.png")
+            print("   Screenshot saved: after_subject_click.png")
 
-            # Click the option from the dropdown
-            option = page.get_by_text(tag, exact=True).first
-            if await option.is_visible(timeout=2000):
-                await option.click()
-                print(f"   Selected subject: {tag}")
-                await asyncio.sleep(0.3)
-        except Exception as e:
-            print(f"   Could not select {tag}: {e}")
+            # Now type and enter for each tag
+            for tag in subject_tags:
+                await page.keyboard.type(tag)
+                await asyncio.sleep(0.5)
+                await page.keyboard.press("Enter")
+                await asyncio.sleep(0.5)
+                print(f"   Typed: {tag}")
+    except Exception as e:
+        print(f"   Subject error: {e}")
 
-    # Step 8c: Add Theme/Audience tags (treat as dropdown)
+    # Step 8c: Add Theme/Audience tags
     print("Step 8c: Adding Theme/Audience tags...")
     theme_tags = ["Homeschool", "Activities", "Bell Ringers", "Independent Work Packet", "Worksheets"]
 
-    for tag in theme_tags:
-        try:
-            # Click the Tag dropdown to open it
-            tag_dropdown = page.locator('text="Theme, Audience"').locator('..').locator('..').locator('[class*="select"], [class*="dropdown"], [role="combobox"], input').first
-            await tag_dropdown.click()
-            await asyncio.sleep(0.5)
+    try:
+        box = await page.locator('text="Theme, Audience"').first.bounding_box()
+        if box:
+            click_x = box['x'] + 100
+            click_y = box['y'] + 45
+            print(f"   Tag label at ({box['x']}, {box['y']})")
+            print(f"   Clicking at ({click_x}, {click_y})")
+            await page.mouse.click(click_x, click_y)
+            await asyncio.sleep(1)
+            await page.screenshot(path="after_tag_click.png")
+            print("   Screenshot saved: after_tag_click.png")
 
-            # Click the option from the dropdown
-            option = page.get_by_text(tag, exact=True).first
-            if await option.is_visible(timeout=2000):
-                await option.click()
-                print(f"   Selected tag: {tag}")
-                await asyncio.sleep(0.3)
-        except Exception as e:
-            print(f"   Could not select {tag}: {e}")
+            for tag in theme_tags:
+                await page.keyboard.type(tag)
+                await asyncio.sleep(0.5)
+                await page.keyboard.press("Enter")
+                await asyncio.sleep(0.5)
+                print(f"   Typed: {tag}")
+    except Exception as e:
+        print(f"   Tag error: {e}")
 
     # Step 9: Uncheck "Make Listing Active" for draft
     if SAVE_AS_DRAFT:
