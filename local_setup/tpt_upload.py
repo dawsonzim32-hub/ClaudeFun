@@ -285,6 +285,8 @@ async def main():
             await browser.close()
             return
 
+        print("\n*** LOGIN SUCCESSFUL - Starting upload process ***\n")
+
         # Upload each product
         successful = 0
         failed = 0
@@ -300,6 +302,8 @@ async def main():
                     failed += 1
             except Exception as e:
                 print(f"ERROR uploading {product['filename']}: {e}")
+                import traceback
+                traceback.print_exc()
                 failed += 1
 
             # Delay between uploads
