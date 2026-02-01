@@ -43,50 +43,73 @@ DELAY_BETWEEN_UPLOADS = 3  # seconds between each upload
 # =============================================================================
 
 async def login_to_tpt(page):
-    """Log into TPT using keyboard navigation like a human."""
+    """Log into TPT using Playwright's getByPlaceholder."""
     print("Navigating to TPT login...")
     await page.goto("https://www.teacherspayteachers.com/Login")
 
     # Wait for page to fully load
     print("Waiting for page to load...")
-    await asyncio.sleep(3)
+    await page.wait_for_load_state("networkidle")
+    await asyncio.sleep(2)
 
     # Take screenshot
     await page.screenshot(path="login_page.png")
     print("Screenshot saved as login_page.png")
 
-    # Use keyboard navigation - Tab to first input, type, Tab to next, etc.
-    print("Using keyboard to fill login form...")
+    # Use Playwright's getByPlaceholder - the recommended modern approach
+    print("Looking for email field by placeholder...")
+    try:
+        email_field = page.get_by_placeholder("Email or username")
+        await email_field.wait_for(state="visible", timeout=10000)
+        print("Found email field! Clicking and typing...")
+        await email_field.click()
+        await asyncio.sleep(0.3)
+        await email_field.fill(TPT_EMAIL)
+        print(f"Email entered: {TPT_EMAIL}")
+    except Exception as e:
+        print(f"Could not find email field: {e}")
+        # Fallback: try to find any visible input
+        print("Trying fallback: clicking first input...")
+        inputs = await page.query_selector_all('input')
+        print(f"Found {len(inputs)} input elements")
+        for i, inp in enumerate(inputs):
+            try:
+                placeholder = await inp.get_attribute('placeholder')
+                inp_type = await inp.get_attribute('type')
+                print(f"  Input {i}: type={inp_type}, placeholder={placeholder}")
+            except:
+                pass
+        return False
 
-    # Click somewhere on the page first to ensure focus
-    await page.click('body')
-    await asyncio.sleep(0.5)
-
-    # Tab to first input field (email)
-    await page.keyboard.press('Tab')
-    await asyncio.sleep(0.3)
-
-    # Type email
-    print(f"Typing email: {TPT_EMAIL}")
-    await page.keyboard.type(TPT_EMAIL, delay=50)
-    await asyncio.sleep(0.3)
-
-    # Tab to password field
-    await page.keyboard.press('Tab')
-    await asyncio.sleep(0.3)
-
-    # Type password
-    print("Typing password...")
-    await page.keyboard.type(TPT_PASSWORD, delay=50)
-    await asyncio.sleep(0.3)
+    print("Looking for password field...")
+    try:
+        password_field = page.get_by_placeholder("Password")
+        await password_field.click()
+        await asyncio.sleep(0.3)
+        await password_field.fill(TPT_PASSWORD)
+        print("Password entered")
+    except Exception as e:
+        print(f"Could not find password field: {e}")
+        return False
 
     # Take screenshot before submitting
     await page.screenshot(path="before_submit.png")
     print("Screenshot saved as before_submit.png")
 
-    # Press Enter to submit
-    print("Pressing Enter to submit...")
-    await page.keyboard.press('Enter')
+    # Click login button
+    print("Looking for Log in button...")
+    try:
+        login_button = page.get_by_role("button", name="Log in")
+        await login_button.click()
+        print("Clicked Log in button")
+    except Exception as e:
+        print(f"Could not find button by role, trying text: {e}")
+        try:
+            await page.click('button:has-text("Log in")')
+            print("Clicked button by text")
+        except:
+            print("Pressing Enter as fallback...")
+            await page.keyboard.press('Enter')
 
     # Wait for navigation
     print("Waiting for login to complete...")
@@ -99,7 +122,6 @@ async def login_to_tpt(page):
     if "login" in current_url or "signin" in current_url:
         print(f"WARNING: Still on login page. URL: {page.url}")
         print("Login may have failed. Check credentials or CAPTCHA.")
-        print("Check the screenshots to see what happened.")
         return False
 
     print("Login successful!")
