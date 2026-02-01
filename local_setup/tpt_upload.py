@@ -43,116 +43,63 @@ DELAY_BETWEEN_UPLOADS = 3  # seconds between each upload
 # =============================================================================
 
 async def login_to_tpt(page):
-    """Log into TPT."""
+    """Log into TPT using keyboard navigation like a human."""
     print("Navigating to TPT login...")
     await page.goto("https://www.teacherspayteachers.com/Login")
 
     # Wait for page to fully load
     print("Waiting for page to load...")
-    await asyncio.sleep(5)
+    await asyncio.sleep(3)
 
-    # Take screenshot to see what we're working with
+    # Take screenshot
     await page.screenshot(path="login_page.png")
     print("Screenshot saved as login_page.png")
 
-    # Try multiple selectors for email field
-    print("Looking for email field...")
-    email_selectors = [
-        'input[placeholder="Email or username"]',
-        'input[placeholder*="Email"]',
-        'input[placeholder*="email"]',
-        'input[placeholder*="username"]',
-        'input[name="email"]',
-        'input[type="email"]',
-        'input[type="text"]',
-        '#email'
-    ]
+    # Use keyboard navigation - Tab to first input, type, Tab to next, etc.
+    print("Using keyboard to fill login form...")
 
-    email_filled = False
-    for selector in email_selectors:
-        try:
-            element = page.locator(selector).first
-            if await element.count() > 0:
-                print(f"Found email field with: {selector}")
-                await element.fill(TPT_EMAIL)
-                email_filled = True
-                break
-        except Exception as e:
-            continue
+    # Click somewhere on the page first to ensure focus
+    await page.click('body')
+    await asyncio.sleep(0.5)
 
-    if not email_filled:
-        print("Could not find email field. Trying to type in first visible input...")
-        # Try clicking first input and typing
-        inputs = page.locator('input:visible')
-        count = await inputs.count()
-        print(f"Found {count} visible inputs")
-        if count > 0:
-            await inputs.first.click()
-            await inputs.first.fill(TPT_EMAIL)
-            email_filled = True
+    # Tab to first input field (email)
+    await page.keyboard.press('Tab')
+    await asyncio.sleep(0.3)
 
-    if not email_filled:
-        print("ERROR: Could not find email field")
-        return False
+    # Type email
+    print(f"Typing email: {TPT_EMAIL}")
+    await page.keyboard.type(TPT_EMAIL, delay=50)
+    await asyncio.sleep(0.3)
 
-    # Try multiple selectors for password field
-    print("Looking for password field...")
-    password_selectors = [
-        'input[placeholder="Password"]',
-        'input[type="password"]',
-        'input[name="password"]',
-        'input[id="password"]',
-        '#password'
-    ]
+    # Tab to password field
+    await page.keyboard.press('Tab')
+    await asyncio.sleep(0.3)
 
-    password_filled = False
-    for selector in password_selectors:
-        try:
-            element = page.locator(selector).first
-            if await element.count() > 0:
-                print(f"Found password field with: {selector}")
-                await element.fill(TPT_PASSWORD)
-                password_filled = True
-                break
-        except:
-            continue
+    # Type password
+    print("Typing password...")
+    await page.keyboard.type(TPT_PASSWORD, delay=50)
+    await asyncio.sleep(0.3)
 
-    if not password_filled:
-        print("ERROR: Could not find password field")
-        return False
+    # Take screenshot before submitting
+    await page.screenshot(path="before_submit.png")
+    print("Screenshot saved as before_submit.png")
 
-    print("Credentials entered. Looking for login button...")
-    await asyncio.sleep(1)
-
-    # Try multiple selectors for submit button
-    submit_selectors = [
-        'button:has-text("Log in")',
-        'button:has-text("Log In")',
-        'button:has-text("Login")',
-        'button[type="submit"]',
-        'input[type="submit"]'
-    ]
-
-    for selector in submit_selectors:
-        try:
-            button = page.locator(selector).first
-            if await button.count() > 0:
-                print(f"Clicking submit button: {selector}")
-                await button.click()
-                break
-        except:
-            continue
+    # Press Enter to submit
+    print("Pressing Enter to submit...")
+    await page.keyboard.press('Enter')
 
     # Wait for navigation
     print("Waiting for login to complete...")
     await asyncio.sleep(5)
     await page.screenshot(path="after_login.png")
+    print("Screenshot saved as after_login.png")
 
     # Check if login succeeded
     current_url = page.url.lower()
     if "login" in current_url or "signin" in current_url:
         print(f"WARNING: Still on login page. URL: {page.url}")
         print("Login may have failed. Check credentials or CAPTCHA.")
+        print("Check the screenshots to see what happened.")
         return False
 
     print("Login successful!")
