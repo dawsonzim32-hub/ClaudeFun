@@ -126,26 +126,36 @@ async def upload_product(page, product, pdf_folder):
     await page.screenshot(path="step2_my_products.png")
 
     add_clicked = False
-    add_selectors = [
-        'text="Add New Product"',
-        'a:has-text("Add New Product")',
-        'button:has-text("Add New Product")',
-        'text="Add Product"',
-        'a:has-text("Add Product")',
-        '[href*="add"]',
-        'text="New Product"',
-    ]
 
-    for selector in add_selectors:
+    # Try the most reliable method first - get_by_role for link (it's a green button/link)
+    try:
+        add_btn = page.get_by_role("link", name="Add New Product")
+        if await add_btn.is_visible(timeout=5000):
+            await add_btn.click()
+            add_clicked = True
+            print("   Clicked using get_by_role link")
+    except:
+        pass
+
+    if not add_clicked:
         try:
-            element = page.locator(selector).first
-            if await element.is_visible(timeout=2000):
-                await element.click()
+            add_btn = page.get_by_role("button", name="Add New Product")
+            if await add_btn.is_visible(timeout=3000):
+                await add_btn.click()
                 add_clicked = True
-                print(f"   Clicked: {selector}")
-                break
+                print("   Clicked using get_by_role button")
         except:
-            continue
+            pass
+
+    if not add_clicked:
+        try:
+            add_btn = page.get_by_text("Add New Product", exact=True)
+            if await add_btn.is_visible(timeout=3000):
+                await add_btn.click()
+                add_clicked = True
+                print("   Clicked using get_by_text")
+        except:
+            pass
 
     if not add_clicked:
         print("ERROR: Could not find Add New Product button")
