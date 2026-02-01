@@ -111,16 +111,24 @@ async def login_to_tpt(page):
             print("Pressing Enter as fallback...")
             await page.keyboard.press('Enter')
 
-    # Wait for navigation
-    print("Waiting for login to complete...")
-    await asyncio.sleep(5)
+    # Wait for navigation - wait up to 30 seconds for URL to change
+    print("Waiting for login to complete (up to 30 seconds)...")
+    for i in range(30):
+        await asyncio.sleep(1)
+        current_url = page.url.lower()
+        if "login" not in current_url and "signin" not in current_url:
+            print(f"Login succeeded! Redirected to: {page.url}")
+            break
+        if i % 5 == 4:
+            print(f"  Still waiting... ({i+1} seconds)")
+
     await page.screenshot(path="after_login.png")
     print("Screenshot saved as after_login.png")
 
     # Check if login succeeded
     current_url = page.url.lower()
     if "login" in current_url or "signin" in current_url:
-        print(f"WARNING: Still on login page. URL: {page.url}")
+        print(f"WARNING: Still on login page after 30 seconds. URL: {page.url}")
         print("Login may have failed. Check credentials or CAPTCHA.")
         return False
 
