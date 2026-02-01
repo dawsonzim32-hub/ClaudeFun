@@ -46,21 +46,116 @@ async def login_to_tpt(page):
     """Log into TPT."""
     print("Navigating to TPT login...")
     await page.goto("https://www.teacherspayteachers.com/Login")
-    await page.wait_for_load_state("networkidle")
 
-    # Fill login form
-    print("Entering credentials...")
-    await page.fill('input[name="email"], input[type="email"]', TPT_EMAIL)
-    await page.fill('input[name="password"], input[type="password"]', TPT_PASSWORD)
+    # Wait for page to fully load
+    print("Waiting for page to load...")
+    await asyncio.sleep(5)
 
-    # Click login button
-    await page.click('button[type="submit"], input[type="submit"]')
-    await page.wait_for_load_state("networkidle")
+    # Take screenshot to see what we're working with
+    await page.screenshot(path="login_page.png")
+    print("Screenshot saved as login_page.png")
+
+    # Try multiple selectors for email field
+    print("Looking for email field...")
+    email_selectors = [
+        'input[name="email"]',
+        'input[type="email"]',
+        'input[id="email"]',
+        'input[placeholder*="email" i]',
+        'input[placeholder*="Email" i]',
+        '#email',
+        '[data-testid="email-input"]',
+        'input[autocomplete="email"]',
+        'input[autocomplete="username"]'
+    ]
+
+    email_filled = False
+    for selector in email_selectors:
+        try:
+            element = page.locator(selector).first
+            if await element.count() > 0:
+                print(f"Found email field with: {selector}")
+                await element.fill(TPT_EMAIL)
+                email_filled = True
+                break
+        except Exception as e:
+            continue
+
+    if not email_filled:
+        print("Could not find email field. Trying to type in first visible input...")
+        # Try clicking first input and typing
+        inputs = page.locator('input:visible')
+        count = await inputs.count()
+        print(f"Found {count} visible inputs")
+        if count > 0:
+            await inputs.first.click()
+            await inputs.first.fill(TPT_EMAIL)
+            email_filled = True
+
+    if not email_filled:
+        print("ERROR: Could not find email field")
+        return False
+
+    # Try multiple selectors for password field
+    print("Looking for password field...")
+    password_selectors = [
+        'input[name="password"]',
+        'input[type="password"]',
+        'input[id="password"]',
+        '#password',
+        '[data-testid="password-input"]'
+    ]
+
+    password_filled = False
+    for selector in password_selectors:
+        try:
+            element = page.locator(selector).first
+            if await element.count() > 0:
+                print(f"Found password field with: {selector}")
+                await element.fill(TPT_PASSWORD)
+                password_filled = True
+                break
+        except:
+            continue
+
+    if not password_filled:
+        print("ERROR: Could not find password field")
+        return False
+
+    print("Credentials entered. Looking for login button...")
+    await asyncio.sleep(1)
+
+    # Try multiple selectors for submit button
+    submit_selectors = [
+        'button[type="submit"]',
+        'input[type="submit"]',
+        'button:has-text("Log In")',
+        'button:has-text("Login")',
+        'button:has-text("Sign In")',
+        'button:has-text("Sign in")',
+        '[data-testid="login-button"]'
+    ]
+
+    for selector in submit_selectors:
+        try:
+            button = page.locator(selector).first
+            if await button.count() > 0:
+                print(f"Clicking submit button: {selector}")
+                await button.click()
+                break
+        except:
+            continue
+
+    # Wait for navigation
+    print("Waiting for login to complete...")
+    await asyncio.sleep(5)
+    await page.screenshot(path="after_login.png")
 
     # Check if login succeeded
-    await asyncio.sleep(2)
-    if "login" in page.url.lower():
-        print("ERROR: Login may have failed. Check credentials.")
+    current_url = page.url.lower()
+    if "login" in current_url or "signin" in current_url:
+        print(f"WARNING: Still on login page. URL: {page.url}")
+        print("Login may have failed. Check credentials or CAPTCHA.")
         return False
 
     print("Login successful!")
