@@ -123,16 +123,55 @@ async def upload_product(page, product, pdf_folder):
 
     # Step 2: Click "Digital Download" button
     print("Step 2: Clicking Digital Download...")
-    try:
-        digital_btn = page.locator('a:has-text("Digital Download"), button:has-text("Digital Download")').first
-        await digital_btn.click()
-        await page.wait_for_load_state("networkidle")
-        await asyncio.sleep(2)
-        print("   Clicked Digital Download")
-    except Exception as e:
-        print(f"ERROR: Could not click Digital Download: {e}")
+    await page.screenshot(path="step2_before_click.png")
+    print("   Screenshot saved: step2_before_click.png")
+
+    # Try multiple selectors for the Digital Download option
+    clicked = False
+    selectors_to_try = [
+        'text="Digital Download"',
+        'a:has-text("Digital Download")',
+        'button:has-text("Digital Download")',
+        '[data-testid*="digital"]',
+        '.product-type-card:has-text("Digital")',
+        'div:has-text("Digital Download") >> visible=true',
+        'a[href*="digital"]',
+        'text="Digital"',
+    ]
+
+    for selector in selectors_to_try:
+        try:
+            print(f"   Trying selector: {selector}")
+            element = page.locator(selector).first
+            if await element.is_visible(timeout=2000):
+                await element.click()
+                clicked = True
+                print(f"   SUCCESS: Clicked using {selector}")
+                break
+        except Exception as e:
+            continue
+
+    if not clicked:
+        # Last resort: try clicking by coordinates if we can find any clickable card
+        try:
+            print("   Trying to find any product type card...")
+            cards = page.locator('a, button, [role="button"]').filter(has_text="Digital")
+            count = await cards.count()
+            print(f"   Found {count} elements with 'Digital' text")
+            if count > 0:
+                await cards.first.click()
+                clicked = True
+                print("   Clicked first Digital element")
+        except Exception as e:
+            print(f"   Could not click Digital element: {e}")
+
+    if not clicked:
+        print("ERROR: Could not click Digital Download with any selector")
         await page.screenshot(path="error_step2.png")
         return False
+
+    await page.wait_for_load_state("networkidle")
+    await asyncio.sleep(2)
 
     # Step 3: Fill in title
     print("Step 3: Setting title...")
