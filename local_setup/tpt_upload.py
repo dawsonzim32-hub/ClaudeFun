@@ -266,8 +266,27 @@ async def upload_product(page, product, pdf_folder):
     try:
         file_input = page.locator('input[type="file"]').first
         await file_input.set_input_files(pdf_path)
-        print(f"   Uploaded: {filename}")
-        await asyncio.sleep(5)  # Wait for upload
+        print(f"   Uploading: {filename}")
+
+        # Wait for upload to complete - look for progress indicator to disappear
+        # or file name to appear in the upload area
+        print("   Waiting for upload to complete...")
+        for i in range(30):  # Wait up to 30 seconds
+            await asyncio.sleep(1)
+            # Check if there's a loading/progress indicator
+            try:
+                loading = page.locator('[class*="loading"], [class*="progress"], [class*="uploading"]').first
+                if not await loading.is_visible(timeout=500):
+                    print(f"   Upload appears complete after {i+1} seconds")
+                    break
+            except:
+                pass
+            if i % 5 == 4:
+                print(f"   Still uploading... ({i+1}s)")
+
+        # Extra wait to be safe
+        await asyncio.sleep(3)
+        print("   Upload complete!")
     except Exception as e:
         print(f"WARNING: File upload issue: {e}")
 
