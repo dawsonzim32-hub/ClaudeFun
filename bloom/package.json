@@ -1,0 +1,28 @@
+{
+  "name": "bloom-fitness",
+  "version": "1.0.0",
+  "description": "Bloom — Cycle-synced workout experience",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "ios": "cap open ios",
+    "ios:sync": "vite build && cap sync ios"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "@capacitor/core": "^6.1.0",
+    "@capacitor/ios": "^6.1.0",
+    "@capacitor/status-bar": "^6.0.0",
+    "@capacitor/splash-screen": "^6.0.0",
+    "@capacitor/haptics": "^6.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.4.0",
+    "@capacitor/cli": "^6.1.0"
+  }
+}

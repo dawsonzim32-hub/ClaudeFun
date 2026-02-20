@@ -1,0 +1,51 @@
+/* ═══════════════════════════════════════════════════════════
+   Bloom Global Styles
+   iOS-ready defaults and resets
+   ═══════════════════════════════════════════════════════════ */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  /* Prevent iOS rubber-banding and overscroll */
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #0a1f17;
+  color: #d4f5e4;
+  /* Prevent text selection during workouts */
+  -webkit-user-select: none;
+  user-select: none;
+  /* iOS safe areas */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* Hide scrollbars globally (cleaner mobile feel) */
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* Prevent iOS tap highlight */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Smooth button transitions */
+button {
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+button:active {
+  transform: scale(0.97);
+}
+
+/* Prevent iOS zoom on input focus */
+input, select, textarea {
+  font-size: 16px;
+}

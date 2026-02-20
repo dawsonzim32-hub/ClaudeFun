@@ -1,0 +1,72 @@
+/* ═══════════════════════════════════════════════════════════
+   Bloom Animations
+   ═══════════════════════════════════════════════════════════ */
+
+/* Creature breathing — gentle idle */
+@keyframes bloom-breathe {
+  0%, 100% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.03) translateY(-2px); }
+}
+
+/* Creature bouncing — cardio/cheering */
+@keyframes bloom-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* Creature sleeping — rest periods */
+@keyframes bloom-sleep {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(3px) rotate(2deg); }
+}
+
+/* Creature pulsing — strength work */
+@keyframes bloom-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+/* Creature wiggle — celebration */
+@keyframes bloom-wiggle {
+  0% { transform: rotate(0); }
+  25% { transform: rotate(10deg); }
+  50% { transform: rotate(0); }
+  75% { transform: rotate(-10deg); }
+  100% { transform: rotate(0); }
+}
+
+/* Particles floating up */
+@keyframes bloom-float {
+  0% { opacity: 0.8; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-40px) scale(0.3); }
+}
+
+/* Fade in */
+@keyframes bloom-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Fade up (for staggered entrances) */
+@keyframes bloom-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Scale in (celebration screen) */
+@keyframes bloom-scale-in {
+  from { opacity: 0; transform: scale(0.5); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Confetti falling */
+@keyframes bloom-confetti {
+  0% { transform: translateY(0) rotate(0); }
+  100% { transform: translateY(60px) rotate(360deg); opacity: 0; }
+}
+
+/* Timer countdown pulse */
+@keyframes bloom-countdown {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.08); opacity: 0.8; }
+}
