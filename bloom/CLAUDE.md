@@ -4,7 +4,7 @@
 
 Bloom is a cycle-syncing fitness app with a virtual companion creature that transforms through seasonal forms mirroring hormonal phases. Market positioning: "Musa but for fitness." Musa (310K+ downloads, $30/yr subscription) proved the market for cycle-synced creature mechanics. Bloom fills the gap Musa's users complain about: actual guided workouts instead of meditation-only.
 
-The prototype is a single-file React component (bloom-v6.jsx, ~1,380 lines) that went through six adversarial code review rounds. It is production-adjacent but not shipped — it's an interactive specification for building the real mobile app.
+The prototype is a single-file React component (bloom-v7.jsx, ~1,536 lines) that went through six adversarial code review rounds plus a seventh round that fixed all critical bugs, added 6 new workouts, onboarding, floor-work substitutions, and atomic evolution logic. It is production-adjacent but not shipped — it's an interactive specification for building the real mobile app.
 
 ## Product Philosophy
 
@@ -48,8 +48,9 @@ Two layers:
 - `cycleStartDate` (string|null) — ISO date of last period start, used to auto-calculate current phase
 - `cycleEvolutions` (number) — count of completed full-cycle evolutions
 - `currentCyclePhases` ({ menstrual: bool, follicular: bool, ovulatory: bool, luteal: bool }) — tracks which phases have at least one workout completion in the current cycle
+- `hasOnboarded` (bool) — whether user has completed the onboarding flow
 
-Reducer actions: `COMPLETE_WORKOUT`, `QUIT_WORKOUT`, `SET_MODIFIER`, `SET_CYCLE_START`, `RESET_CYCLE_PHASES`. Completion is atomic — XP, streak, dedup'd completedIds, phase count, and currentCyclePhases all update in one transition.
+Reducer actions: `COMPLETE_WORKOUT`, `QUIT_WORKOUT`, `SET_MODIFIER`, `SET_CYCLE_START`, `RESET_CYCLE_PHASES`, `SET_ONBOARDED`. Completion is fully atomic — XP, streak, dedup'd completedIds, phase count, currentCyclePhases, AND cycle evolution all update in one transition (v7 fix: no double-dispatch).
 
 **Ephemeral state (useState):**
 
@@ -215,7 +216,7 @@ XP feeds visible creature growth (continuous progress, not pass/fail), streak + 
 - All inline styles (no CSS modules, no styled-components)
 - Phase colors accessed via `const t = PHASES[phase]` then `t.bg`, `t.accent`, etc.
 - PhaseVars component injects CSS custom properties but most code still uses `t.*` directly
-- Animations defined in `<style>` block inside browse screen, namespaced with `bloom-` prefix
+- Animations defined in `BloomStyles` component rendered at app root on ALL screens (v7 fix: v6 only rendered them on browse)
 - `maxWidth: 430`, `margin: "0 auto"` on all screen root containers (phone-shell feel)
 
 ### Fonts
@@ -233,21 +234,21 @@ XP feeds visible creature growth (continuous progress, not pass/fail), streak + 
 
 ## Current Content Inventory
 
-| Phase | Workouts | Exercises | Notes |
-|-------|----------|-----------|-------|
-| Menstrual | 2 (2-Min Reset, Gentle Restore) | 13 | All low-impact, floor-heavy |
-| Follicular | 2 (Foundation Build, Cardio Ignite) | 18 | Mix of compound strength + cardio |
-| Ovulatory | 1 (Peak Power Circuit) | ~9 | HIIT-style, highest intensity |
-| Luteal | 1 (Steady State) | ~9 | Moderate, stability-focused |
+| Phase | Workouts | Exercises | Duration Range | Notes |
+|-------|----------|-----------|----------------|-------|
+| Menstrual | 3 (2-Min Reset, Gentle Restore, Seated Calm) | 25 | 2-7 min | All low-impact; Seated Calm has zero floor work |
+| Follicular | 3 (Foundation Build, Cardio Ignite, Upper Body Sculpt) | 33 | 6-7 min | Progressive unlock; mix of strength + cardio |
+| Ovulatory | 3 (Peak Power Circuit, Sprint Intervals, Full Body Power) | 32 | 5-7 min | Highest intensity; Full Body Power unlocks after 2 |
+| Luteal | 3 (Steady State, Tension Release, Balance & Core) | 29 | 5-6 min | Moderate; Balance & Core unlocks after 2 |
 
-Minimum for launch: 3-4 workouts per phase (12-16 total)
+12 workouts total, 119 exercises. All durations auto-calculated from exercise data (v7 fix: v6 had hardcoded lies).
 
 ## Known Gaps (Not Bugs — Missing Features)
 
 ### Critical for MVP
 
 - [ ] Exercise demonstrations — video, animation, or illustration for each exercise
-- [ ] More workouts — need 3-4 per phase minimum
+- [x] ~~More workouts~~ — v7: 12 workouts (3 per phase), 119 exercises
 - [ ] Audio cues — 3-2-1 countdown beep, rest-end chime, completion sound
 - [ ] Mobile app wrapper — React Native or Expo
 
@@ -256,7 +257,7 @@ Minimum for launch: 3-4 workouts per phase (12-16 total)
 - [ ] Post-workout reflection — "How did that feel today?" with 3 emoji options
 - [ ] "Not today" check-in — button on browse screen that awards small XP
 - [ ] Streak-aware encouragement copy
-- [ ] Floor-work substitution map
+- [x] ~~Floor-work substitution map~~ — v7: FLOOR_SUBSTITUTIONS with 14 standing alternatives
 - [ ] Backend — user accounts, cloud sync, analytics
 - [ ] Push notifications
 - [ ] Haptics
@@ -280,7 +281,7 @@ Minimum for launch: 3-4 workouts per phase (12-16 total)
 | v4 | Defensive interval management, deterministic XP, progress bar fix, live substitution |
 | v5 | Font loading hook, handleSkip defensive null, completedByPhase atomic, quit confirmation |
 | v6 | Workout cards as button, focus trap + Esc on all overlays, useReducer, localStorage persistence |
-| v7 | Cycle-Complete Evolution system, cycle date input, auto phase calculation, evolution cosmetics |
+| v7 | **Full audit + rebuild.** Fixed: hardcoded wrong durations → auto-calc from exercise data; keyframes only on browse → global BloomStyles on all screens; creature always Seedling in workout → passes real totalXP; noFloorWork toggle did nothing → FLOOR_SUBSTITUTIONS map with 14 standing alternatives; double-dispatch evolution race → atomic evolution in COMPLETE_WORKOUT reducer; setState-inside-setState timer anti-pattern → exerciseIdx effect; dead code + unused imports removed. Added: 6 new workouts (12 total, 3/phase); Onboarding screen with cycle date input; hasOnboarded persisted state; future-date guard in calculatePhase; noFloorWork conflict badge on workout cards; bloom-fadein animation. |
 
 ## File Structure (When Splitting)
 
