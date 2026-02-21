@@ -116,6 +116,64 @@ const FLOOR_SUBSTITUTIONS = {
   "Side Plank": "Standing side lean with arm overhead"
 };
 
+// ─── STREAK-AWARE COPY ───────────────────────────────────────────────────────
+
+// Browse screen greeting based on streak and phase
+function getCreatureGreeting(streak, phase) {
+  if (streak === 0) {
+    const returning = {
+      menstrual: "You're here. That's what matters.",
+      follicular: "Welcome back. Your Bloom missed you.",
+      ovulatory: "Fresh start. Your Bloom is ready when you are.",
+      luteal: "No pressure. Your Bloom is just glad to see you."
+    };
+    return returning[phase];
+  }
+  if (streak <= 2) {
+    const building = {
+      menstrual: "Building momentum, gently.",
+      follicular: "Two days in. You're building something.",
+      ovulatory: "Your energy is showing up. So are you.",
+      luteal: "Steady steps. Your Bloom notices."
+    };
+    return building[phase];
+  }
+  if (streak <= 6) {
+    const rolling = {
+      menstrual: "A real streak, even through your period. Respect.",
+      follicular: `${streak} days. Your Bloom is growing with you.`,
+      ovulatory: `${streak} days strong. Peak you, peak Bloom.`,
+      luteal: `${streak} days of showing up. That's consistency.`
+    };
+    return rolling[phase];
+  }
+  // 7+
+  const committed = {
+    menstrual: `${streak} days. Your Bloom has never looked better.`,
+    follicular: `${streak}-day streak. You and your Bloom are in sync.`,
+    ovulatory: `${streak} days. Your Bloom is radiant — just like you.`,
+    luteal: `${streak} days. Nothing breaks this rhythm.`
+  };
+  return committed[phase];
+}
+
+// Completion screen headline based on streak
+function getCompletionHeadline(streak, justEvolved) {
+  if (justEvolved) return "Your Bloom Evolved!";
+  if (streak <= 1) return "Workout Complete!";
+  if (streak <= 3) return "Another one down!";
+  if (streak <= 7) return `${streak} days strong!`;
+  return `${streak}-day streak! Unstoppable.`;
+}
+
+// "Not today" responses, phase-aware
+const NOT_TODAY_RESPONSES = {
+  menstrual: "Rest is part of the cycle. Your Bloom understands.",
+  follicular: "Even rest days keep the connection alive.",
+  ovulatory: "Not every day needs to be peak. Noted with love.",
+  luteal: "Listening to your body is its own kind of strength."
+};
+
 // ─── AUDIO SYSTEM ────────────────────────────────────────────────────────────
 // Generates tones programmatically via Web Audio API — no external files needed.
 // AudioContext is created lazily on first user interaction (browser requirement).
@@ -509,7 +567,8 @@ const DEFAULT_STATE = {
   cycleEvolutions: 0,
   currentCyclePhases: { menstrual: false, follicular: false, ovulatory: false, luteal: false },
   hasOnboarded: false,
-  reflections: [] // { workoutId, phase, feeling, date }
+  reflections: [], // { workoutId, phase, feeling, date }
+  lastNotTodayDate: null // ISO date string, prevents spamming (once per day)
 };
 
 function appReducer(state, action) {
@@ -551,6 +610,13 @@ function appReducer(state, action) {
       };
     case "SET_ONBOARDED":
       return { ...state, hasOnboarded: true };
+    case "NOT_TODAY":
+      return {
+        ...state,
+        totalXP: state.totalXP + 2,
+        lastNotTodayDate: new Date().toISOString().split("T")[0]
+        // Deliberately does NOT reset streak — "not today" is not quitting
+      };
     case "RECORD_REFLECTION":
       return {
         ...state,
@@ -1191,7 +1257,7 @@ function ActiveWorkout({ workout, phase, modifiers, totalXP, onComplete, onQuit,
 
 // ─── WORKOUT COMPLETE ────────────────────────────────────────────────────────
 
-function WorkoutComplete({ workout, phase, baseXP, bonusXP, totalXP, cycleEvolutions, currentCyclePhases, justEvolved, onDone }) {
+function WorkoutComplete({ workout, phase, baseXP, bonusXP, totalXP, streak, cycleEvolutions, currentCyclePhases, justEvolved, onDone }) {
   const t = PHASES[phase];
   const stage = getBloomStage(totalXP);
   const next = getNextStage(totalXP);
@@ -1205,7 +1271,7 @@ function WorkoutComplete({ workout, phase, baseXP, bonusXP, totalXP, cycleEvolut
       </div>
 
       <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, color: t.text, margin: "20px 0 8px" }}>
-        {justEvolved ? "Your Bloom Evolved!" : "Workout Complete!"}
+        {getCompletionHeadline(streak, justEvolved)}
       </h2>
 
       {justEvolved && evolutionTier && (
@@ -1445,6 +1511,7 @@ export default function BloomApp() {
   const [lastBonusXP, setLastBonusXP] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [justEvolved, setJustEvolved] = useState(false);
+  const [notTodayMessage, setNotTodayMessage] = useState(null); // Brief confirmation text
 
   const prevPhaseRef = useRef(phase);
 
@@ -1537,6 +1604,14 @@ export default function BloomApp() {
     dispatch({ type: "SET_CYCLE_START", date });
   }
 
+  function handleNotToday() {
+    dispatch({ type: "NOT_TODAY" });
+    setNotTodayMessage(NOT_TODAY_RESPONSES[phase]);
+    setTimeout(() => setNotTodayMessage(null), 3000);
+  }
+
+  const notTodayUsedToday = state.lastNotTodayDate === new Date().toISOString().split("T")[0];
+
   function isUnlocked(workout) {
     if (!workout.unlockReq) return true;
     const { phase: reqPhase, workoutsNeeded } = workout.unlockReq;
@@ -1567,8 +1642,13 @@ export default function BloomApp() {
             </button>
           </div>
 
+          {/* Creature + streak-aware greeting */}
           <div style={{ textAlign: "center", marginBottom: 24 }}>
             <BloomCreature phase={phase} mood="idle" size={120} stage={stage.name} evolutions={state.cycleEvolutions} />
+            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: t.muted, margin: "8px 0 0",
+              fontStyle: "italic", animation: "bloom-fadein 0.5s ease" }}>
+              {getCreatureGreeting(state.streak, phase)}
+            </p>
             {state.cycleStartDate && (
               <div style={{ marginTop: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
                 <CycleProgressRing currentCyclePhases={state.currentCyclePhases} phase={phase} size={50} />
@@ -1656,6 +1736,29 @@ export default function BloomApp() {
             );
           })}
 
+          {/* Not Today check-in */}
+          {notTodayMessage ? (
+            <div style={{ textAlign: "center", padding: 16, marginTop: 8, background: t.surface,
+              borderRadius: 16, border: `1px solid ${t.border}`, animation: "bloom-fadein 0.4s ease" }}>
+              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: t.text, margin: "0 0 4px" }}>
+                {notTodayMessage}
+              </p>
+              <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: t.accent, margin: 0, fontWeight: 600 }}>
+                +2 XP
+              </p>
+            </div>
+          ) : (
+            <button onClick={handleNotToday} disabled={notTodayUsedToday}
+              style={{
+                width: "100%", padding: "14px", marginTop: 8, background: "transparent",
+                border: `1px dashed ${t.border}`, borderRadius: 16, cursor: notTodayUsedToday ? "default" : "pointer",
+                fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: t.muted,
+                opacity: notTodayUsedToday ? 0.4 : 1, transition: "all 0.2s"
+              }}>
+              {notTodayUsedToday ? "Checked in today" : "Not working out today — and that's okay"}
+            </button>
+          )}
+
           <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 10, color: t.muted, marginTop: 24, textAlign: "center", lineHeight: 1.4 }}>
             Not medical advice. Cycle phases are estimates. Consult a healthcare provider for personalized guidance.
           </p>
@@ -1729,6 +1832,7 @@ export default function BloomApp() {
         <WorkoutComplete
           workout={selectedWorkout} phase={phase}
           baseXP={lastBaseXP} bonusXP={lastBonusXP} totalXP={state.totalXP}
+          streak={state.streak}
           cycleEvolutions={state.cycleEvolutions} currentCyclePhases={state.currentCyclePhases}
           justEvolved={justEvolved}
           onDone={handleDone}
