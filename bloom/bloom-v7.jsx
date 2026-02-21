@@ -116,6 +116,59 @@ const FLOOR_SUBSTITUTIONS = {
   "Side Plank": "Standing side lean with arm overhead"
 };
 
+// ─── AUDIO SYSTEM ────────────────────────────────────────────────────────────
+// Generates tones programmatically via Web Audio API — no external files needed.
+// AudioContext is created lazily on first user interaction (browser requirement).
+
+let _audioCtx = null;
+
+function getAudioCtx() {
+  if (!_audioCtx) {
+    _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (_audioCtx.state === "suspended") {
+    _audioCtx.resume();
+  }
+  return _audioCtx;
+}
+
+function playTone(freq, duration, type = "sine", volume = 0.3) {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    gain.gain.setValueAtTime(volume, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+  } catch { /* Audio API unavailable or blocked */ }
+}
+
+const BloomAudio = {
+  // Short pip at 3, 2, 1 seconds remaining
+  countdownBeep() { playTone(880, 0.08, "sine", 0.2); },
+  // Two-note ascending tone when moving to next exercise
+  exerciseTransition() {
+    playTone(440, 0.15, "sine", 0.2);
+    setTimeout(() => playTone(660, 0.15, "sine", 0.2), 150);
+  },
+  // Bright chime when rest ends and next exercise begins
+  restEnd() {
+    playTone(660, 0.12, "sine", 0.25);
+    setTimeout(() => playTone(880, 0.15, "sine", 0.25), 120);
+  },
+  // Triumphant C-E-G when workout is complete
+  workoutComplete() {
+    playTone(523, 0.2, "sine", 0.3);
+    setTimeout(() => playTone(659, 0.2, "sine", 0.3), 200);
+    setTimeout(() => playTone(784, 0.35, "sine", 0.3), 400);
+  }
+};
+
 // ─── WORKOUTS ────────────────────────────────────────────────────────────────
 
 const WORKOUTS = {
@@ -390,6 +443,35 @@ function useOverlay(isOpen, onClose) {
   return overlayRef;
 }
 
+// Keep screen awake during active workouts
+function useWakeLock(active) {
+  useEffect(() => {
+    if (!active) return;
+    let wakeLock = null;
+
+    async function request() {
+      try {
+        if ("wakeLock" in navigator) {
+          wakeLock = await navigator.wakeLock.request("screen");
+        }
+      } catch { /* Wake lock denied or unavailable */ }
+    }
+
+    request();
+
+    // Re-request when user tabs back (wake lock releases on visibility change)
+    function handleVisibility() {
+      if (document.visibilityState === "visible" && active) request();
+    }
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      if (wakeLock) wakeLock.release().catch(() => {});
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [active]);
+}
+
 // ─── PHASE CALCULATION ───────────────────────────────────────────────────────
 
 function calculatePhase(cycleStartDate) {
@@ -426,7 +508,8 @@ const DEFAULT_STATE = {
   cycleStartDate: null,
   cycleEvolutions: 0,
   currentCyclePhases: { menstrual: false, follicular: false, ovulatory: false, luteal: false },
-  hasOnboarded: false
+  hasOnboarded: false,
+  reflections: [] // { workoutId, phase, feeling, date }
 };
 
 function appReducer(state, action) {
@@ -468,6 +551,16 @@ function appReducer(state, action) {
       };
     case "SET_ONBOARDED":
       return { ...state, hasOnboarded: true };
+    case "RECORD_REFLECTION":
+      return {
+        ...state,
+        reflections: [...state.reflections, {
+          workoutId: action.workoutId,
+          phase: action.phase,
+          feeling: action.feeling,
+          date: new Date().toISOString()
+        }]
+      };
     default:
       return state;
   }
@@ -848,9 +941,10 @@ function WorkoutPreview({ workout, phase, modifiers, onStart, onBack }) {
 
 function ActiveWorkout({ workout, phase, modifiers, totalXP, onComplete, onQuit, streakBonus }) {
   const t = PHASES[phase];
-  const stage = getBloomStage(totalXP); // v7 fix: use actual XP, not hardcoded 0
+  const stage = getBloomStage(totalXP);
+  useWakeLock(true); // Keep screen on during workout
 
-  // Apply both impact AND floor substitutions (v6 bug fix: noFloorWork now works)
+  // Apply both impact AND floor substitutions
   const exercises = useMemo(() => {
     if (!workout?.exercises?.length) return [];
     return workout.exercises.map(ex => {
@@ -919,7 +1013,7 @@ function ActiveWorkout({ workout, phase, modifiers, totalXP, onComplete, onQuit,
     }
   }, [exerciseIdx]);
 
-  // Timer tick
+  // Timer tick with audio cues
   useEffect(() => {
     if (isPaused) { clearTimer(); return; }
     clearTimer();
@@ -935,16 +1029,22 @@ function ActiveWorkout({ workout, phase, modifiers, totalXP, onComplete, onQuit,
               setXpDisplay(xpRef.current);
             }
             if (exerciseIdx < exercises.length - 1) {
+              // Play transition sound based on what just ended
+              const wasRest = exercises[exerciseIdx]?.type === "rest";
+              if (wasRest) BloomAudio.restEnd();
+              else BloomAudio.exerciseTransition();
               setExerciseIdx(exerciseIdx + 1);
-              // timeLeft set by exerciseIdx effect above
             } else {
               clearTimer();
+              BloomAudio.workoutComplete();
               const bonusXP = streakBonus ? Math.floor(xpRef.current * 0.1) : 0;
               onComplete(xpRef.current, bonusXP);
             }
           }
           return 0;
         }
+        // Countdown beeps at 3, 2, 1 seconds remaining
+        if (prev >= 2 && prev <= 4) BloomAudio.countdownBeep();
         return prev - 1;
       });
     }, 1000);
@@ -960,9 +1060,13 @@ function ActiveWorkout({ workout, phase, modifiers, totalXP, onComplete, onQuit,
     const earned = getExerciseXP(exerciseIdx);
     if (earned > 0) { xpRef.current += earned; setXpDisplay(xpRef.current); }
     if (exerciseIdx < exercises.length - 1) {
+      const wasRest = exercises[exerciseIdx]?.type === "rest";
+      if (wasRest) BloomAudio.restEnd();
+      else BloomAudio.exerciseTransition();
       advancingRef.current = true;
       setExerciseIdx(exerciseIdx + 1);
     } else {
+      BloomAudio.workoutComplete();
       const bonusXP = streakBonus ? Math.floor(xpRef.current * 0.1) : 0;
       onComplete(xpRef.current, bonusXP);
     }
@@ -1191,6 +1295,90 @@ function WorkoutComplete({ workout, phase, baseXP, bonusXP, totalXP, cycleEvolut
   );
 }
 
+// ─── POST-WORKOUT REFLECTION ─────────────────────────────────────────────────
+
+const REFLECTION_OPTIONS = [
+  { key: "tough", emoji: "😓", label: "That was tough" },
+  { key: "just_right", emoji: "😊", label: "Just right" },
+  { key: "easy", emoji: "💪", label: "I could do more" }
+];
+
+const REFLECTION_RESPONSES = {
+  tough: {
+    menstrual: "Listening to your body is strength. You still showed up.",
+    follicular: "Building takes effort. It gets easier from here.",
+    ovulatory: "Even at peak, some days are harder. That's real.",
+    luteal: "Progesterone makes everything heavier. You did it anyway."
+  },
+  just_right: {
+    menstrual: "Your body and the workout were in sync today.",
+    follicular: "Right in the sweet spot. Your Bloom noticed.",
+    ovulatory: "Peak energy, matched effort. That's the design.",
+    luteal: "Steady and consistent. Exactly what this phase needs."
+  },
+  easy: {
+    menstrual: "Good sign. Try the next workout up when you're ready.",
+    follicular: "Your strength is building. Challenge yourself next time.",
+    ovulatory: "You're stronger than this workout. Level up.",
+    luteal: "Feeling strong in luteal phase is a great sign."
+  }
+};
+
+function ReflectionScreen({ workout, phase, totalXP, onReflect }) {
+  const t = PHASES[phase];
+  const stage = getBloomStage(totalXP);
+  const [selected, setSelected] = useState(null);
+  const [showResponse, setShowResponse] = useState(false);
+
+  function handleSelect(feeling) {
+    setSelected(feeling);
+    setShowResponse(true);
+    setTimeout(() => onReflect(feeling), 1800);
+  }
+
+  return (
+    <div style={{ maxWidth: 430, margin: "0 auto", padding: 20, background: t.bgGrad, minHeight: "100vh",
+      display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+      <div style={{ animation: "bloom-fadein 0.5s ease", textAlign: "center", width: "100%", maxWidth: 320 }}>
+        <BloomCreature phase={phase} mood="happy" size={100} stage={stage.name} />
+
+        <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, color: t.text, margin: "16px 0 8px" }}>
+          How did that feel?
+        </h2>
+        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: t.muted, margin: "0 0 28px" }}>
+          {workout.title}
+        </p>
+
+        {!showResponse ? (
+          <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+            {REFLECTION_OPTIONS.map(opt => (
+              <button key={opt.key} onClick={() => handleSelect(opt.key)}
+                style={{
+                  flex: 1, padding: "16px 8px", background: t.surface, border: `1px solid ${t.border}`,
+                  borderRadius: 16, cursor: "pointer", transition: "all 0.2s",
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: 8
+                }}>
+                <span style={{ fontSize: 32 }}>{opt.emoji}</span>
+                <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: t.text, fontWeight: 500 }}>
+                  {opt.label}
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div style={{ animation: "bloom-fadein 0.4s ease", padding: 20, background: t.surface,
+            borderRadius: 16, border: `1px solid ${t.border}` }}>
+            <span style={{ fontSize: 32 }}>{REFLECTION_OPTIONS.find(o => o.key === selected)?.emoji}</span>
+            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: t.text, margin: "12px 0 0", lineHeight: 1.5 }}>
+              {REFLECTION_RESPONSES[selected]?.[phase]}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── ONBOARDING ──────────────────────────────────────────────────────────────
 
 function Onboarding({ onComplete }) {
@@ -1320,13 +1508,16 @@ export default function BloomApp() {
     setLastBaseXP(baseXP);
     setLastBonusXP(bonusXP);
 
-    // Check if this will trigger evolution (before dispatch, since dispatch is atomic now)
     const updatedPhases = { ...state.currentCyclePhases, [phase]: true };
     const willEvolve = Object.values(updatedPhases).every(Boolean);
     setJustEvolved(willEvolve);
 
-    // v7: COMPLETE_WORKOUT handles evolution atomically — no double dispatch
     dispatch({ type: "COMPLETE_WORKOUT", workoutId: selectedWorkout.id, xp: totalEarned, phase });
+    setScreen("reflection"); // Ask how it felt before showing celebration
+  }
+
+  function handleReflection(feeling) {
+    dispatch({ type: "RECORD_REFLECTION", workoutId: selectedWorkout.id, phase, feeling });
     setScreen("complete");
   }
 
@@ -1510,6 +1701,20 @@ export default function BloomApp() {
           totalXP={state.totalXP}
           onComplete={handleCompleteWorkout} onQuit={handleQuitWorkout}
           streakBonus={streakBonus}
+        />
+      </PhaseVars>
+    );
+  }
+
+  // ─── REFLECTION SCREEN ──────────────────────────────────────────────────
+
+  if (screen === "reflection" && selectedWorkout) {
+    return (
+      <PhaseVars phase={phase}>
+        <BloomStyles />
+        <ReflectionScreen
+          workout={selectedWorkout} phase={phase} totalXP={state.totalXP}
+          onReflect={handleReflection}
         />
       </PhaseVars>
     );

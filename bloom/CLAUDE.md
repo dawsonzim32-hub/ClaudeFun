@@ -4,7 +4,7 @@
 
 Bloom is a cycle-syncing fitness app with a virtual companion creature that transforms through seasonal forms mirroring hormonal phases. Market positioning: "Musa but for fitness." Musa (310K+ downloads, $30/yr subscription) proved the market for cycle-synced creature mechanics. Bloom fills the gap Musa's users complain about: actual guided workouts instead of meditation-only.
 
-The prototype is a single-file React component (bloom-v7.jsx, ~1,536 lines) that went through six adversarial code review rounds plus a seventh round that fixed all critical bugs, added 6 new workouts, onboarding, floor-work substitutions, and atomic evolution logic. It is production-adjacent but not shipped — it's an interactive specification for building the real mobile app.
+The prototype is a single-file React component (bloom-v7.jsx, ~1,741 lines) that went through six adversarial code review rounds plus a seventh round that fixed all critical bugs, added 6 new workouts, onboarding, floor-work substitutions, and atomic evolution logic. It is production-adjacent but not shipped — it's an interactive specification for building the real mobile app.
 
 ## Product Philosophy
 
@@ -49,8 +49,9 @@ Two layers:
 - `cycleEvolutions` (number) — count of completed full-cycle evolutions
 - `currentCyclePhases` ({ menstrual: bool, follicular: bool, ovulatory: bool, luteal: bool }) — tracks which phases have at least one workout completion in the current cycle
 - `hasOnboarded` (bool) — whether user has completed the onboarding flow
+- `reflections` (array) — [{ workoutId, phase, feeling, date }] — post-workout reflection data for future personalization
 
-Reducer actions: `COMPLETE_WORKOUT`, `QUIT_WORKOUT`, `SET_MODIFIER`, `SET_CYCLE_START`, `RESET_CYCLE_PHASES`, `SET_ONBOARDED`. Completion is fully atomic — XP, streak, dedup'd completedIds, phase count, currentCyclePhases, AND cycle evolution all update in one transition (v7 fix: no double-dispatch).
+Reducer actions: `COMPLETE_WORKOUT`, `QUIT_WORKOUT`, `SET_MODIFIER`, `SET_CYCLE_START`, `RESET_CYCLE_PHASES`, `SET_ONBOARDED`, `RECORD_REFLECTION`. Completion is fully atomic — XP, streak, dedup'd completedIds, phase count, currentCyclePhases, AND cycle evolution all update in one transition (v7 fix: no double-dispatch).
 
 **Ephemeral state (useState):**
 
@@ -249,19 +250,19 @@ XP feeds visible creature growth (continuous progress, not pass/fail), streak + 
 
 - [ ] Exercise demonstrations — video, animation, or illustration for each exercise
 - [x] ~~More workouts~~ — v7: 12 workouts (3 per phase), 119 exercises
-- [ ] Audio cues — 3-2-1 countdown beep, rest-end chime, completion sound
+- [x] ~~Audio cues~~ — v7: Web Audio API. Countdown beeps (3-2-1), exercise transition tone, rest-end chime, completion C-E-G chord
 - [ ] Mobile app wrapper — React Native or Expo
 
 ### Important for Retention
 
-- [ ] Post-workout reflection — "How did that feel today?" with 3 emoji options
+- [x] ~~Post-workout reflection~~ — v7: ReflectionScreen with 3 options (tough/just right/easy), phase-aware responses, persisted in reflections[]
 - [ ] "Not today" check-in — button on browse screen that awards small XP
 - [ ] Streak-aware encouragement copy
 - [x] ~~Floor-work substitution map~~ — v7: FLOOR_SUBSTITUTIONS with 14 standing alternatives
 - [ ] Backend — user accounts, cloud sync, analytics
 - [ ] Push notifications
 - [ ] Haptics
-- [ ] Screen wake lock
+- [x] ~~Screen wake lock~~ — v7: useWakeLock hook via navigator.wakeLock API, re-requests on visibility change
 
 ### Nice to Have
 
@@ -281,7 +282,7 @@ XP feeds visible creature growth (continuous progress, not pass/fail), streak + 
 | v4 | Defensive interval management, deterministic XP, progress bar fix, live substitution |
 | v5 | Font loading hook, handleSkip defensive null, completedByPhase atomic, quit confirmation |
 | v6 | Workout cards as button, focus trap + Esc on all overlays, useReducer, localStorage persistence |
-| v7 | **Full audit + rebuild.** Fixed: hardcoded wrong durations → auto-calc from exercise data; keyframes only on browse → global BloomStyles on all screens; creature always Seedling in workout → passes real totalXP; noFloorWork toggle did nothing → FLOOR_SUBSTITUTIONS map with 14 standing alternatives; double-dispatch evolution race → atomic evolution in COMPLETE_WORKOUT reducer; setState-inside-setState timer anti-pattern → exerciseIdx effect; dead code + unused imports removed. Added: 6 new workouts (12 total, 3/phase); Onboarding screen with cycle date input; hasOnboarded persisted state; future-date guard in calculatePhase; noFloorWork conflict badge on workout cards; bloom-fadein animation. |
+| v7 | **Full audit + rebuild.** Fixed: hardcoded wrong durations → auto-calc from exercise data; keyframes only on browse → global BloomStyles on all screens; creature always Seedling in workout → passes real totalXP; noFloorWork toggle did nothing → FLOOR_SUBSTITUTIONS map with 14 standing alternatives; double-dispatch evolution race → atomic evolution in COMPLETE_WORKOUT reducer; setState-inside-setState timer anti-pattern → exerciseIdx effect; dead code + unused imports removed. Added: 6 new workouts (12 total, 3/phase); Onboarding screen with cycle date input; hasOnboarded persisted state; future-date guard in calculatePhase; noFloorWork conflict badge on workout cards; bloom-fadein animation. Then: Audio cue system (Web Audio API — countdown beeps, exercise transition, rest-end chime, C-E-G completion chord); screen wake lock (useWakeLock hook, re-requests on visibility change); post-workout reflection (ReflectionScreen with tough/just right/easy, phase-aware response copy, persisted reflections[]). |
 
 ## File Structure (When Splitting)
 
