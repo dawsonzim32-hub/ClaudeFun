@@ -1,57 +1,47 @@
 # CLAUDE.md - AI Assistant Instructions
 
-This file provides instructions for AI assistants working on the PaperWrapped project.
+This file provides instructions for AI assistants working on PaperWrapped.
 
 ## Project Overview
 
-PaperWrapped is a grading platform that presents student results in a Spotify Wrapped-style experience. Teachers enter grades through a web dashboard, and students view their results as an animated full-screen slideshow.
+PaperWrapped is a React app where teachers annotate student papers and deliver feedback as a Spotify Wrapped-style animated presentation. Teachers highlight text, tag strengths/growth areas, score categories, and the student sees their results as a full-screen slideshow.
 
 **The user is not a programmer.** Write clear, well-commented code and explain technical decisions in plain language.
 
 ## Tech Stack
 
-| Component | Technology | Why |
-|-----------|------------|-----|
-| Language | Python 3.10+ | Beginner-friendly |
-| Web Framework | Flask | Simple, well-documented |
-| Database | SQLite via Flask-SQLAlchemy | No setup needed |
-| Auth | Flask-Login | Session-based teacher accounts |
-| Frontend | HTML/CSS/JS (no framework) | No build step required |
+| Component | Technology |
+|-----------|------------|
+| Framework | React 18 |
+| Build Tool | Vite |
+| DOCX Parsing | Mammoth.js + custom ZIP parser |
+| AI | Anthropic API (client-side calls) |
+| Styling | Inline styles (no CSS framework) |
+| Fonts | Outfit, JetBrains Mono, Crimson Pro |
 
 ## File Structure
 
 ```
 PaperWrapped/
-├── app.py                  # Main Flask app with all routes
-├── config.py               # Configuration from environment variables
-├── models.py               # Database models (Teacher, Class, Student, etc.)
-├── requirements.txt        # Python dependencies
-├── static/css/             # Stylesheets (style.css + wrapped.css)
-├── static/js/              # JavaScript (wrapped.js for slide animations)
-├── templates/              # HTML templates (Jinja2)
-├── templates/wrapped/      # The Wrapped experience templates
-└── utils/                  # Helper modules
-    └── wrapped_generator.py # Computes all Wrapped stats from grades
+├── index.html           # HTML entry point
+├── package.json         # Dependencies and scripts
+├── vite.config.js       # Vite configuration
+└── src/
+    ├── main.jsx         # React DOM render entry
+    └── App.jsx          # Entire application (single file)
 ```
 
-## Key Concepts
+## Key Components (all in App.jsx)
 
-- **Teacher**: Logs in with email/password. Creates classes, adds students, enters grades.
-- **Student**: No login needed. Uses a unique access code to view their Wrapped.
-- **Wrapped**: An animated slideshow computed from a student's grades. Shows top subjects, improvements, grade distribution, trends, and highlights.
-
-## Code Quality Standards
-
-### Every Route Must:
-- Validate form inputs before processing
-- Flash clear error messages on failure
-- Verify ownership (teachers can only see their own classes)
-
-### The Wrapped Experience Must:
-- Work on mobile (tap to advance)
-- Load quickly (no heavy frameworks)
-- Look good with any amount of data
-- Handle edge cases (1 class, 1 assignment, etc.)
+- **App** — Root: routes between Dashboard, DeliveryScreen, and Wrapped views
+- **Dashboard** — 5-step wizard: Paper → Categories → Annotate → Customize → Preview
+- **PaperAnnotator** — Text highlighting, annotation sidebar, score inputs
+- **CategoryEditor** — Add/remove/customize grading categories
+- **Wrapped** — Full-screen animated slide presentation for students
+- **PaperRevealSlide** — Animated paper with highlights that appear one by one
+- **QuizSlide** — Interactive feedback comprehension quiz
+- **DeliveryScreen** — QR code and shareable link generation
+- **QRCodeSVG** — Client-side QR code generator (no dependencies)
 
 ## Commit Message Convention
 

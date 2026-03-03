@@ -1,43 +1,9 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-*.egg-info/
+node_modules/
 dist/
-build/
-*.egg
-
-# Virtual environment
-venv/
-env/
-.venv/
-
-# Environment variables (contains secrets)
 .env
-
-# Database
-*.db
-*.sqlite3
-
-# IDE
+.env.local
+*.log
+.DS_Store
 .vscode/
 .idea/
 *.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-logs/*.log
-!logs/.gitkeep
-
-# Flask
-instance/
-
-# Temporary files
-*.tmp
-*.temp
-.cache/
