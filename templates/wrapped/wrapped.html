@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ data.student_name }}'s Wrapped - PaperWrapped</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/wrapped.css') }}">
+</head>
+<body class="wrapped-body">
+
+    <!--
+        THE WRAPPED EXPERIENCE
+        Each "slide" is a full-screen card with a gradient background.
+        Students tap/click to advance through slides, just like Spotify Wrapped.
+    -->
+    <div id="wrapped-app">
+
+        <!-- Slide 1: Welcome -->
+        <div class="slide active" data-bg="gradient-1">
+            <div class="slide-content">
+                <p class="slide-label">{{ school_name }} presents</p>
+                <h1 class="slide-title anim-pop">
+                    {{ data.student_name }}'s<br>Wrapped
+                </h1>
+                <p class="slide-subtitle anim-fade-up">Your year in review</p>
+                <p class="tap-hint">Tap anywhere to continue</p>
+            </div>
+        </div>
+
+        <!-- Slide 2: Year in Numbers -->
+        <div class="slide" data-bg="gradient-2">
+            <div class="slide-content">
+                <p class="slide-label">This year you tackled</p>
+                <div class="big-number anim-count" data-target="{{ data.total_assignments }}">0</div>
+                <p class="slide-subtitle">assignments across {{ data.total_classes }} class{{ 'es' if data.total_classes != 1 else '' }}</p>
+            </div>
+        </div>
+
+        <!-- Slide 3: Top Subject -->
+        <div class="slide" data-bg="gradient-3">
+            <div class="slide-content">
+                <p class="slide-label">Your #1 subject was</p>
+                <h1 class="slide-title anim-pop">{{ data.top_subject }}</h1>
+                <div class="big-number anim-fade-up">{{ data.top_subject_average }}%</div>
+                <p class="slide-subtitle">average score</p>
+            </div>
+        </div>
+
+        <!-- Slide 4: All Subjects Breakdown -->
+        <div class="slide" data-bg="gradient-4">
+            <div class="slide-content">
+                <p class="slide-label">Subject breakdown</p>
+                <div class="bar-chart anim-bars">
+                    {% for subject, avg in data.subject_averages.items() %}
+                    <div class="bar-row">
+                        <span class="bar-label">{{ subject }}</span>
+                        <div class="bar-track">
+                            <div class="bar-fill" style="--target-width: {{ avg }}%"></div>
+                        </div>
+                        <span class="bar-value">{{ avg }}%</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Most Improved (only if there's improvement data) -->
+        {% if data.most_improved %}
+        <div class="slide" data-bg="gradient-5">
+            <div class="slide-content">
+                <p class="slide-label">Most improved</p>
+                <h1 class="slide-title anim-pop">{{ data.most_improved.subject }}</h1>
+                <p class="slide-subtitle anim-fade-up">
+                    You improved by <strong>{{ data.most_improved.improvement }}%</strong>
+                    from the first half to the second half of the year
+                </p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Slide 6: Grade Distribution -->
+        <div class="slide" data-bg="gradient-6">
+            <div class="slide-content">
+                <p class="slide-label">Your grade mix</p>
+                <div class="grade-donuts anim-fade-up">
+                    {% for letter, count in data.grade_distribution.items() %}
+                    {% if count > 0 %}
+                    <div class="donut-item">
+                        <div class="donut-letter letter-{{ letter }}">{{ letter }}</div>
+                        <div class="donut-count">{{ count }}</div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: Trend -->
+        {% if data.trend|length > 1 %}
+        <div class="slide" data-bg="gradient-7">
+            <div class="slide-content">
+                <p class="slide-label">Your journey</p>
+                <div class="trend-chart anim-draw">
+                    <canvas id="trend-canvas" width="600" height="300"></canvas>
+                </div>
+                <p class="slide-subtitle">Monthly average over the year</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Slide 8: Highlights -->
+        <div class="slide" data-bg="gradient-8">
+            <div class="slide-content">
+                <p class="slide-label">Highlights</p>
+                <div class="highlights-list">
+                    {% for h in data.highlights %}
+                    <div class="highlight-card anim-slide-in" style="--delay: {{ loop.index0 * 0.2 }}s">
+                        <span class="highlight-icon">
+                            {% if h.icon == 'star' %}&#11088;{% endif %}
+                            {% if h.icon == 'trophy' %}&#127942;{% endif %}
+                            {% if h.icon == 'thumbs-up' %}&#128077;{% endif %}
+                            {% if h.icon == 'fire' %}&#128293;{% endif %}
+                            {% if h.icon == 'rocket' %}&#128640;{% endif %}
+                            {% if h.icon == 'sparkle' %}&#10024;{% endif %}
+                        </span>
+                        <span class="highlight-text">{{ h.text }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: Final Summary -->
+        <div class="slide" data-bg="gradient-9">
+            <div class="slide-content">
+                <p class="slide-label">Overall</p>
+                <div class="final-grade anim-pop">
+                    <div class="final-letter">{{ data.overall_letter }}</div>
+                    <div class="final-percentage">{{ data.overall_average }}%</div>
+                </div>
+                <h2 class="slide-title anim-fade-up">
+                    Great work, {{ data.student_name }}!
+                </h2>
+                <p class="slide-subtitle">See you next year.</p>
+                <a href="{{ url_for('index') }}" class="wrapped-home-link">PaperWrapped</a>
+            </div>
+        </div>
+
+        <!-- Progress dots -->
+        <div class="progress-dots" id="progress-dots"></div>
+    </div>
+
+    <!-- Pass trend data to JavaScript for the chart -->
+    <script>
+        var trendData = {{ data.trend | tojson }};
+    </script>
+    <script src="{{ url_for('static', filename='js/wrapped.js') }}"></script>
+</body>
+</html>

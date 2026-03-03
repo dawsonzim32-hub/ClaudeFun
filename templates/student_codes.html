@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Student Access Codes - PaperWrapped{% endblock %}
+
+{% block content %}
+<div class="codes-page">
+    <h2>Student Access Codes</h2>
+    <p class="class-meta">{{ school_class.name }} &middot; {{ school_class.subject }}</p>
+    <p class="help-text">
+        Print this page or copy the codes below. Students enter their code at
+        the PaperWrapped homepage to view their Wrapped.
+    </p>
+
+    <div class="codes-grid">
+        {% for student in students %}
+        <div class="code-card">
+            <div class="code-card-name">{{ student.name }}</div>
+            <div class="code-card-code">{{ student.access_code }}</div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="print-actions">
+        <button onclick="window.print()" class="btn btn-primary">Print This Page</button>
+        <a href="{{ url_for('view_class', class_id=school_class.id) }}"
+           class="btn btn-secondary">Back to Class</a>
+    </div>
+</div>
+{% endblock %}

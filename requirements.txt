@@ -1,23 +1,16 @@
-# TPT Virtual Assistant Agent - Dependencies
+# PaperWrapped - Dependencies
 
-# Browser automation
-playwright>=1.40.0
+# Web framework
+flask>=3.0.0
 
-# Configuration handling
-pyyaml>=6.0
+# Database ORM
+flask-sqlalchemy>=3.1.0
 
-# Spreadsheet support
-pandas>=2.0.0
-openpyxl>=3.1.0  # For Excel file support
+# User authentication
+flask-login>=0.6.3
 
-# CLI interface
-click>=8.1.0
+# Password hashing
+werkzeug>=3.0.0
 
-# Logging enhancements
-rich>=13.0.0  # Pretty console output
-
-# Environment variable management
+# Environment variable loading
 python-dotenv>=1.0.0
-
-# Validation
-pydantic>=2.0.0
