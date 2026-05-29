@@ -29,8 +29,15 @@ PDF_FOLDER = r"C:\Users\DZimmerman\Downloads\not_boring_media_100_products\uploa
 CSV_FILE = os.path.join(os.path.dirname(__file__), "products.csv")
 
 # TPT Credentials
-TPT_EMAIL = "dzimmerman@wesleyanschool.org"
-TPT_PASSWORD = "9704418dz"
+# SECURITY: Never hardcode these. They are read from environment variables
+# (or a local .env file, which is gitignored and must NEVER be committed).
+# Set them before running, e.g. in a .env file:
+#   TPT_EMAIL=you@example.com
+#   TPT_PASSWORD=your-password
+# Login is done manually in the browser anyway (see login_to_tpt), so these
+# are optional and only used if you choose to automate the login form.
+TPT_EMAIL = os.environ.get("TPT_EMAIL", "")
+TPT_PASSWORD = os.environ.get("TPT_PASSWORD", "")
 
 # Settings
 SAVE_AS_DRAFT = False  # True = save as draft, False = publish immediately
