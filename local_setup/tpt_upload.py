@@ -40,7 +40,15 @@ TPT_EMAIL = os.environ.get("TPT_EMAIL", "")
 TPT_PASSWORD = os.environ.get("TPT_PASSWORD", "")
 
 # Settings
-SAVE_AS_DRAFT = False  # True = save as draft, False = publish immediately
+# DRAFT-FIRST WORKFLOW (safe default): products upload as DRAFTS so you can
+# review them on TPT before anything goes live. Only flip this to False once
+# you've spot-checked the drafts and are ready to publish.
+SAVE_AS_DRAFT = True  # True = save as draft (safe), False = publish immediately
+
+# Price guardrails (dollars). Pre-flight validation refuses to run if any
+# product falls outside this range, protecting against typo'd prices going live.
+PRICE_MIN = 0.50
+PRICE_MAX = 100.00
 HEADLESS = False  # False = show browser window, True = run invisibly
 DELAY_BETWEEN_UPLOADS = 5  # seconds between each upload (increased for safety)
 MAX_RETRIES = 1  # Number of times to retry a failed product
@@ -537,23 +545,67 @@ async def main():
         skipped = original_count - len(products)
         print(f"Starting from product #{args.start} (skipping {skipped} products)")
 
-    # Validate files exist
-    print("\nValidating files...")
+    # Pre-flight validation: files, required metadata, and prices.
+    # Per the project's quality-control rules, we STOP before touching the
+    # browser if anything is wrong - never publish a bad price or title.
+    print("\nRunning pre-flight validation...")
     missing = []
-    for p in products:
-        pdf_path = os.path.join(PDF_FOLDER, p['filename'])
-        if not os.path.exists(pdf_path):
-            missing.append(p['filename'])
+    bad_metadata = []
+    bad_price = []
+    low_price_warnings = []
 
+    for p in products:
+        fname = p.get('filename', '<no filename>')
+
+        # File must exist and be readable
+        pdf_path = os.path.join(PDF_FOLDER, fname)
+        if not os.path.exists(pdf_path):
+            missing.append(fname)
+
+        # Title is required and must be non-empty
+        if not p.get('title', '').strip():
+            bad_metadata.append(f"{fname}: missing title")
+
+        # Price must be a number within the allowed range
+        raw_price = p.get('price', '').strip()
+        try:
+            price_val = float(raw_price)
+            if price_val < PRICE_MIN or price_val > PRICE_MAX:
+                bad_price.append(f"{fname}: price ${price_val:.2f} outside ${PRICE_MIN:.2f}-${PRICE_MAX:.2f}")
+            elif price_val < 1.00:
+                low_price_warnings.append(f"{fname}: unusually low price ${price_val:.2f}")
+        except ValueError:
+            bad_price.append(f"{fname}: price '{raw_price}' is not a valid number")
+
+    # Report any hard failures and stop the batch
+    errors = []
     if missing:
-        print(f"ERROR: {len(missing)} files not found:")
-        for m in missing[:5]:
-            print(f"  - {m}")
+        errors.append(f"{len(missing)} file(s) not found:")
+        errors += [f"    - {m}" for m in missing[:5]]
         if len(missing) > 5:
-            print(f"  ... and {len(missing) - 5} more")
+            errors.append(f"    ... and {len(missing) - 5} more")
+    if bad_metadata:
+        errors.append(f"{len(bad_metadata)} metadata problem(s):")
+        errors += [f"    - {m}" for m in bad_metadata[:5]]
+    if bad_price:
+        errors.append(f"{len(bad_price)} price problem(s):")
+        errors += [f"    - {m}" for m in bad_price[:5]]
+
+    if errors:
+        print("\nVALIDATION FAILED - nothing was uploaded:")
+        for e in errors:
+            print(f"  {e}")
+        print("\nFix the issues above in products.csv and re-run.")
         sys.exit(1)
 
-    print(f"All {len(products)} files validated!")
+    # Non-blocking warnings the user should see but can proceed past
+    if low_price_warnings:
+        print(f"\nWARNING: {len(low_price_warnings)} product(s) priced under $1.00:")
+        for w in low_price_warnings[:5]:
+            print(f"  - {w}")
+
+    mode = "DRAFT (safe - review before publishing)" if SAVE_AS_DRAFT else "PUBLISH LIVE"
+    print(f"\nAll {len(products)} products validated! Upload mode: {mode}")
 
     # Dry run stops here
     if args.dry_run:
